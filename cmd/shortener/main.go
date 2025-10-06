@@ -42,7 +42,7 @@ func requestEndpoint(res http.ResponseWriter, req *http.Request) {
 			tamers[tamer] = reqURL
 			res.WriteHeader(http.StatusCreated)
 			res.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintf(res, "http://127.0.0.1:8080/%s\n", tamer)
+			fmt.Fprintf(res, "http://127.0.0.1:8080/%s", tamer)
 		} else {
 			http.Error(res, "Double Tamer", http.StatusBadRequest)
 		}
