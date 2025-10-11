@@ -9,41 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func TestResponseEndpoint(t *testing.T) {
-// 	type want struct {
-// 		contentType string
-// 		statusCode  int
-// 		location    string
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		request string
-// 		want    want
-// 	}{{
-// 		name:    "Valid Tamer",
-// 		request: "http://127.0.0.1:8080/pS1QflVU",
-// 		want: want{
-// 			contentType: "text/html; charset=utf-8",
-// 			statusCode:  http.StatusTemporaryRedirect,
-// 			location:    "http://example.com",
-// 		},
-// 	}}
-// 	for _, test := range tests {
-// 		t.Run(test.name, func(t *testing.T) {
-// 			request := httptest.NewRequest(http.MethodGet, "/12345678", nil)
-// 			w := httptest.NewRecorder()
-// 			ResponseEndpoint(w, request)
-// 			res := w.Result()
-// 			assert.Equal(t, test.want.statusCode, res.StatusCode)
-// 			defer res.Body.Close()
-// 			_, err := io.ReadAll(res.Body)
-// 			require.NoError(t, err)
-// 			assert.JSONEq(t, test.want.location, res.Header.Get("Location"))
-// 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
-// 		})
-// 	}
-// }
-
 func TestResponseEndpoint(t *testing.T) {
 	type want struct {
 		statusCode int
