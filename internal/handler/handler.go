@@ -54,7 +54,7 @@ func (rc *requestCfg) RequestEndpoint(res http.ResponseWriter, req *http.Request
 			tamers[tamer] = reqURL
 			res.WriteHeader(http.StatusCreated)
 			res.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintf(res, "%s%s", rc.Config.Base, tamer)
+			fmt.Fprintf(res, "%s/%s", rc.Config.Base, tamer)
 		} else {
 			http.Error(res, "Double Tamer", http.StatusBadRequest)
 		}
