@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/akarashov/urltamer/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -113,7 +114,8 @@ func TestRequestEndpoint(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			RequestEndpoint(tt.res, tt.req)
+			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080"})
+			c.RequestEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Contains(t, result.Body.String(), tt.want.body)
 			assert.Equal(t, tt.want.statusCode, result.Code)

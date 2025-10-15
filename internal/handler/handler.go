@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"sync"
+
+	"github.com/akarashov/urltamer/internal/config"
 )
 
 var (
@@ -16,6 +18,10 @@ var (
 
 const tamerLength = 8
 
+type requestCfg struct {
+	Config *config.Config
+}
+
 func makeTamer() string {
 	buffer := make([]byte, tamerLength)
 	rand.Read(buffer)
@@ -23,7 +29,13 @@ func makeTamer() string {
 	return tamer[:tamerLength]
 }
 
-func RequestEndpoint(res http.ResponseWriter, req *http.Request) {
+func New(c *config.Config) *requestCfg {
+	return &requestCfg{
+		Config: c,
+	}
+}
+
+func (rc *requestCfg) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	reqURLb, err := io.ReadAll(req.Body)
@@ -42,7 +54,7 @@ func RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 			tamers[tamer] = reqURL
 			res.WriteHeader(http.StatusCreated)
 			res.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintf(res, "http://127.0.0.1:8080/%s", tamer)
+			fmt.Fprintf(res, "%s%s", rc.Config.Base, tamer)
 		} else {
 			http.Error(res, "Double Tamer", http.StatusBadRequest)
 		}
