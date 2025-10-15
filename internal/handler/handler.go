@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/akarashov/urltamer/internal/config"
@@ -54,7 +55,8 @@ func (rc *requestCfg) RequestEndpoint(res http.ResponseWriter, req *http.Request
 			tamers[tamer] = reqURL
 			res.WriteHeader(http.StatusCreated)
 			res.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintf(res, "%s/%s", rc.Config.Base, tamer)
+			base := strings.TrimRight(rc.Config.Base, "/")
+			fmt.Fprintf(res, "%s/%s", base, tamer)
 		} else {
 			http.Error(res, "Double Tamer", http.StatusBadRequest)
 		}
