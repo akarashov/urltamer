@@ -57,7 +57,8 @@ func TestResponseEndpoint(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ResponseEndpoint(tt.res, tt.req)
+			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080"})
+			c.ResponseEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Equal(t, tt.want.location, result.Header().Get("Location"))
 			assert.Equal(t, tt.want.statusCode, result.Code)
@@ -74,8 +75,7 @@ func TestRequestEndpoint(t *testing.T) {
 	tamers["QAZwsxed"] = "http://example.com"
 
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
+		name string
 		res  http.ResponseWriter
 		req  *http.Request
 		want want
