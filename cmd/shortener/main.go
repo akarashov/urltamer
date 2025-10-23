@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"net/http"
+	"log"
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/akarashov/urltamer/internal/handler"
@@ -9,14 +11,14 @@ import (
 )
 
 func main() {
-	var Cfg config.Config
-	Cfg.New()
+	cfg := config.New()
+	flag.Parse()
 	mux := chi.NewRouter()
-	newhandler := handler.New(&Cfg)
-	mux.Get(`/{tamer}`, handler.ResponseEndpoint)
-	mux.Post(`/`, newhandler.RequestEndpoint)
-	err := http.ListenAndServe(Cfg.Listen, mux)
+	h := handler.New(cfg)
+	mux.Get(`/{tamer}`, h.ResponseEndpoint)
+	mux.Post(`/`, h.RequestEndpoint)
+	err := http.ListenAndServe(cfg.Listen, mux)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

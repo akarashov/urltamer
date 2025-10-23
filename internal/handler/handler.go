@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"sync"
+	"strings"
 
 	"github.com/akarashov/urltamer/internal/config"
 )
@@ -19,8 +19,8 @@ var (
 
 const tamerLength = 8
 
-type requestCfg struct {
-	Config *config.Config
+type Handler struct {
+	Base *string
 }
 
 func makeTamer() string {
@@ -30,13 +30,14 @@ func makeTamer() string {
 	return tamer[:tamerLength]
 }
 
-func New(c *config.Config) *requestCfg {
-	return &requestCfg{
-		Config: c,
+func New(c *config.Config) *Handler {
+	c.Base = strings.TrimRight(c.Base, "/")
+	return &Handler{
+		Base: &c.Base,
 	}
 }
 
-func (rc *requestCfg) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
+func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	reqURLb, err := io.ReadAll(req.Body)
@@ -55,15 +56,14 @@ func (rc *requestCfg) RequestEndpoint(res http.ResponseWriter, req *http.Request
 			tamers[tamer] = reqURL
 			res.WriteHeader(http.StatusCreated)
 			res.Header().Set("Content-Type", "text/plain")
-			base := strings.TrimRight(rc.Config.Base, "/")
-			fmt.Fprintf(res, "%s/%s", base, tamer)
+			fmt.Fprintf(res, "%s/%s", *h.Base, tamer)
 		} else {
 			http.Error(res, "Double Tamer", http.StatusBadRequest)
 		}
 	}
 }
 
-func ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
+func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	tamer := req.URL.Path[1:]
