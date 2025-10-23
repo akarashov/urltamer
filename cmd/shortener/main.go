@@ -13,6 +13,14 @@ import (
 func main() {
 	cfg := config.New()
 	flag.Parse()
+	ecfg := config.NewEnv()
+	if ecfg.Listen != "" {
+		cfg.Listen = ecfg.Listen
+	}
+	if ecfg.Base != "" {
+		cfg.Base = ecfg.Base
+	}
+	
 	mux := chi.NewRouter()
 	h := handler.New(cfg)
 	mux.Get(`/{tamer}`, h.ResponseEndpoint)
