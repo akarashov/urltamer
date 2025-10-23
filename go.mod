@@ -3,6 +3,7 @@ module github.com/akarashov/urltamer
 go 1.24.7
 
 require (
+	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi/v5 v5.2.3 // indirect
 	github.com/labstack/echo/v4 v4.13.4 // indirect
