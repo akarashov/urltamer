@@ -23,6 +23,7 @@ func main() {
 	
 	mux := chi.NewRouter()
 	h := handler.New(cfg)
+	mux.Post(`/api/shorten`, handler.LoggingMiddlewareRequest(h.RequestJSONEndpoint, *log))
 	mux.Get(`/{tamer}`, handler.LoggingMiddlewareResponse(h.ResponseEndpoint, *log))
 	mux.Post(`/`, handler.LoggingMiddlewareRequest(h.RequestEndpoint, *log))
 	log.Infow(

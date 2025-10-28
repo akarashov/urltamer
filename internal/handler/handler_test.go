@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"encoding/json"
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/stretchr/testify/assert"
@@ -66,6 +67,10 @@ func TestResponseEndpoint(t *testing.T) {
 	}
 }
 
+
+
+
+
 func TestRequestEndpoint(t *testing.T) {
 	type want struct {
 		statusCode int
@@ -119,6 +124,80 @@ func TestRequestEndpoint(t *testing.T) {
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Contains(t, result.Body.String(), tt.want.body)
 			assert.Equal(t, tt.want.statusCode, result.Code)
+		})
+	}
+}
+
+
+
+
+
+
+func TestRequestJSONEndpoint(t *testing.T) {
+	type want struct {
+		statusCode int
+		body       string
+	}
+	
+	for k := range tamers {
+    	delete(tamers, k)
+    }
+	
+	tamers["QAZwsxed"] = "http://example.com"
+	tests := []struct {
+		name string
+		res  http.ResponseWriter
+		req  *http.Request
+		want want
+	}{
+		{
+			name: "Valid URL",
+			res:  httptest.NewRecorder(),
+			req:  httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url":"http://example.dev"}`)),
+			want: want{
+				statusCode: http.StatusCreated,
+				body:       "http://127.0.0.1:8080/",
+			}}, {
+			name: "Blank URL",
+			res:  httptest.NewRecorder(),
+			req:  httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url":""}`)),
+			want: want{
+				statusCode: http.StatusBadRequest,
+				body:       "Error body parse",
+			},
+		}, {
+			name: "Double URL",
+			res:  httptest.NewRecorder(),
+			req:  httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url":"http://example.com"}`)),
+			want: want{
+				statusCode: http.StatusBadRequest,
+				body:       "Double URL",
+			},
+		}, {
+			name: "Long URL",
+			res:  httptest.NewRecorder(),
+			req:  httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url":"https://make-a-url-longer.nathanvarner.com/redirect-to-new-url/index.html?long-url=First%20there%20was%20nothing%20and%20then%20a%20new%20character%20came%20along%20h%20and%20then%20a%20new%20character%20came%20along%20t%20and%20then%20a%20new%20character%20came%20along%20t%20and%20then%20a%20new%20character%20came%20along%20p%20and%20then%20a%20new%20character%20came%20along%20s%20and%20then%20a%20new%20character%20came%20along%20:%20and%20then%20a%20new%20character%20came%20along%20/%20and%20then%20a%20new%20character%20came%20along%20/%20and%20then%20a%20new%20character%20came%20along%20y%20and%20then%20a%20new%20character%20came%20along%20a%20and%20then%20a%20new%20character%20came%20along%20.%20and%20then%20a%20new%20character%20came%20along%20r%20and%20then%20a%20new%20character%20came%20along%20u"}`)),
+			want: want{
+				statusCode: http.StatusCreated,
+				body:       "http://127.0.0.1:8080/",
+			},
+		}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080"})
+			tt.req.Header.Set("Content-Type", "application/json")
+			c.RequestJSONEndpoint(tt.res, tt.req)
+			result := tt.res.(*httptest.ResponseRecorder)
+			assert.Equal(t, tt.want.statusCode, result.Code)
+			if tt.name == "Double URL" || tt.name == "Blank URL" {
+				assert.Contains(t, result.Body.String(), tt.want.body)
+			} else	{
+				var respObj Response
+				err := json.Unmarshal(result.Body.Bytes(), &respObj)
+				assert.NoError(t, err)
+				assert.Contains(t, respObj.Result, tt.want.body)
+			}
+			
 		})
 	}
 }

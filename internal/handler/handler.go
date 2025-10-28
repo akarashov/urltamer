@@ -3,12 +3,15 @@ package handler
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+	"bytes"
+
 
 	"github.com/akarashov/urltamer/internal/config"
 	"go.uber.org/zap"
@@ -35,6 +38,14 @@ type (
         http.ResponseWriter
         responseData *responseData
     }
+	
+	Request struct {
+		URL string `json:"url"`
+	}
+
+	Response struct {
+		Result string `json:"result"`
+	}
 )
 
 func makeTamer() string {
@@ -48,6 +59,54 @@ func New(c *config.Config) *Handler {
 	c.Base = strings.TrimRight(c.Base, "/")
 	return &Handler{
 		Base: &c.Base,
+	}
+}
+
+func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request) {
+	var request Request
+	var response Response
+	var buf bytes.Buffer
+	
+	if req.Header.Get("Content-Type") != "application/json" {
+		http.Error(res, "Content-Type must be application/json", http.StatusBadRequest)
+		return
+	}
+	mutex.Lock()
+	defer mutex.Unlock()
+	_, err := buf.ReadFrom(req.Body)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+    if err = json.Unmarshal(buf.Bytes(), &request); err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+        return
+    }
+	if request.URL == "" {
+		http.Error(res, "Error body parse", http.StatusBadRequest)
+	} else {
+		tamer := makeTamer()
+		if _, exist := tamers[tamer]; !exist {
+			for _, v := range tamers {
+				if request.URL == v {
+					http.Error(res, "Double URL", http.StatusBadRequest)
+					return
+				}
+			}
+			tamers[tamer] = request.URL
+
+			response.Result = fmt.Sprintf("%s/%s", *h.Base, tamer)
+			resp, err := json.Marshal(response)
+			if err != nil {
+				http.Error(res, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			res.Header().Set("Content-Type", "application/json")
+			res.WriteHeader(http.StatusCreated)
+			res.Write(resp)
+		} else {
+			http.Error(res, "Double Tamer", http.StatusBadRequest)
+		}
 	}
 }
 
