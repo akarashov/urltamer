@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"net/http"
-	"log"
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/akarashov/urltamer/internal/handler"
@@ -11,6 +10,7 @@ import (
 )
 
 func main() {
+	log := config.NewLogger()
 	cfg := config.New()
 	flag.Parse()
 	ecfg := config.NewEnv()
@@ -23,8 +23,13 @@ func main() {
 	
 	mux := chi.NewRouter()
 	h := handler.New(cfg)
-	mux.Get(`/{tamer}`, h.ResponseEndpoint)
-	mux.Post(`/`, h.RequestEndpoint)
+	mux.Post(`/api/shorten`, handler.LoggingMiddlewareRequest(h.RequestJSONEndpoint, *log))
+	mux.Get(`/{tamer}`, handler.LoggingMiddlewareResponse(h.ResponseEndpoint, *log))
+	mux.Post(`/`, handler.LoggingMiddlewareRequest(h.RequestEndpoint, *log))
+	log.Infow(
+        "Starting server",
+        "addr", cfg.Listen,
+    )
 	err := http.ListenAndServe(cfg.Listen, mux)
 	if err != nil {
 		log.Fatal(err)

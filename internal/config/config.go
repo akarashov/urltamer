@@ -4,8 +4,10 @@ import (
 	"flag"
 	"log"
 	"github.com/caarlos0/env/v11"
+	"go.uber.org/zap"
 )
 
+// var sugar zap.SugaredLogger
 
 type Config struct {
 	Listen string `env:"SERVER_ADDRESS"`
@@ -26,4 +28,13 @@ func NewEnv() *Config {
 		log.Fatal(err)
 	}
 	return c
+}
+
+func NewLogger() *zap.SugaredLogger{
+	logger, err := zap.NewDevelopment()
+    if err != nil {
+        panic(err)
+    }
+    defer logger.Sync()
+    return logger.Sugar()
 }
