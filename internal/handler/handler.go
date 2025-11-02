@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -10,8 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"bytes"
-
 
 	"github.com/akarashov/urltamer/internal/config"
 	"go.uber.org/zap"
@@ -26,19 +25,19 @@ const tamerLength = 8
 
 type (
 	Handler struct {
-	Base *string
+		Base *string
 	}
 
-    responseData struct {
-        status int
-        size int
-    }
+	responseData struct {
+		status int
+		size   int
+	}
 
-    loggingResponseWriter struct {
-        http.ResponseWriter
-        responseData *responseData
-    }
-	
+	loggingResponseWriter struct {
+		http.ResponseWriter
+		responseData *responseData
+	}
+
 	Request struct {
 		URL string `json:"url"`
 	}
@@ -66,7 +65,7 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 	var request Request
 	var response Response
 	var buf bytes.Buffer
-	
+
 	if req.Header.Get("Content-Type") != "application/json" {
 		http.Error(res, "Content-Type must be application/json", http.StatusBadRequest)
 		return
@@ -78,10 +77,10 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
-    if err = json.Unmarshal(buf.Bytes(), &request); err != nil {
+	if err = json.Unmarshal(buf.Bytes(), &request); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
-        return
-    }
+		return
+	}
 	if request.URL == "" {
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
@@ -148,14 +147,14 @@ func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
 }
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-    size, err := r.ResponseWriter.Write(b) 
-    r.responseData.size += size
-    return size, err
+	size, err := r.ResponseWriter.Write(b)
+	r.responseData.size += size
+	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-    r.ResponseWriter.WriteHeader(statusCode) 
-    r.responseData.status = statusCode
+	r.ResponseWriter.WriteHeader(statusCode)
+	r.responseData.status = statusCode
 }
 
 func LoggingMiddlewareRequest(wrapped http.HandlerFunc, sl zap.SugaredLogger) http.HandlerFunc {
@@ -164,27 +163,51 @@ func LoggingMiddlewareRequest(wrapped http.HandlerFunc, sl zap.SugaredLogger) ht
 		wrapped(res, req)
 		duration := time.Since(start)
 		sl.Infoln(
-            "uri", req.RequestURI,
-            "method", req.Method,
-            "duration", duration,
-        )
+			"uri", req.RequestURI,
+			"method", req.Method,
+			"duration", duration,
+		)
 	}
 }
 
 func LoggingMiddlewareResponse(wrapped http.HandlerFunc, sl zap.SugaredLogger) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-		responseData := &responseData {
+		responseData := &responseData{
 			status: 0,
-            size: 0,
-        }
-        lres := loggingResponseWriter {
-        	ResponseWriter: res,
-            responseData: responseData,
-        }
+			size:   0,
+		}
+		lres := loggingResponseWriter{
+			ResponseWriter: res,
+			responseData:   responseData,
+		}
 		wrapped(&lres, req)
 		sl.Infoln(
-            "status", responseData.status,
-            "size", responseData.size,
-        )
+			"status", responseData.status,
+			"size", responseData.size,
+		)
+	}
+}
+
+func GzipMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		acceptEncoding := req.Header.Get("Accept-Encoding")
+		contentEncoding := req.Header.Get("Content-Encoding")
+		supportsGzip := strings.Contains(acceptEncoding, "gzip")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+		if supportsGzip {
+			compress_res := newCompressWriter(res)
+			res = compress_res
+			defer compress_res.Close()
+		}
+		if sendsGzip {
+			compress_req, err := newCompressReader(req.Body)
+			if err != nil {
+				res.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			req.Body = compress_req
+			defer compress_req.Close()
+		}
+		wrapped(res, req)
 	}
 }
