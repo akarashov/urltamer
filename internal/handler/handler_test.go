@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"encoding/json"
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/stretchr/testify/assert"
@@ -67,10 +70,6 @@ func TestResponseEndpoint(t *testing.T) {
 	}
 }
 
-
-
-
-
 func TestRequestEndpoint(t *testing.T) {
 	type want struct {
 		statusCode int
@@ -128,21 +127,16 @@ func TestRequestEndpoint(t *testing.T) {
 	}
 }
 
-
-
-
-
-
 func TestRequestJSONEndpoint(t *testing.T) {
 	type want struct {
 		statusCode int
 		body       string
 	}
-	
+
 	for k := range tamers {
-    	delete(tamers, k)
-    }
-	
+		delete(tamers, k)
+	}
+
 	tamers["QAZwsxed"] = "http://example.com"
 	tests := []struct {
 		name string
@@ -191,13 +185,118 @@ func TestRequestJSONEndpoint(t *testing.T) {
 			assert.Equal(t, tt.want.statusCode, result.Code)
 			if tt.name == "Double URL" || tt.name == "Blank URL" {
 				assert.Contains(t, result.Body.String(), tt.want.body)
-			} else	{
+			} else {
 				var respObj Response
 				err := json.Unmarshal(result.Body.Bytes(), &respObj)
 				assert.NoError(t, err)
 				assert.Contains(t, respObj.Result, tt.want.body)
 			}
-			
+
+		})
+	}
+}
+
+func TestGzipMiddleware(t *testing.T) {
+	gzipBody := func(s string) []byte {
+		var buf bytes.Buffer
+		gz := gzip.NewWriter(&buf)
+		gz.Write([]byte(s))
+		gz.Close()
+		return buf.Bytes()
+	}
+
+	tests := []struct {
+		name            string
+		acceptEncoding  string
+		contentEncoding string
+		requestBody     []byte
+		expectGzipResp  bool
+		expectStatus    int
+		expectRespBody  string
+	}{
+		{
+			name:           "Compression",
+			acceptEncoding: "gzip",
+			requestBody:    nil,
+			expectGzipResp: true,
+			expectStatus:   http.StatusOK,
+			expectRespBody: "http://example.com",
+		},
+		{
+			name:           "No compression",
+			acceptEncoding: "",
+			requestBody:    nil,
+			expectGzipResp: false,
+			expectStatus:   http.StatusOK,
+			expectRespBody: "http://example.com",
+		},
+		{
+			name:            "Decompression",
+			contentEncoding: "gzip",
+			requestBody:     gzipBody("http://example.com"),
+			expectGzipResp:  false,
+			expectStatus:    http.StatusOK,
+			expectRespBody:  "http://example.com",
+		},
+		{
+			name:            "Compression and Decompression",
+			acceptEncoding:  "gzip",
+			contentEncoding: "gzip",
+			requestBody:     gzipBody("http://example.com"),
+			expectGzipResp:  true,
+			expectStatus:    http.StatusOK,
+			expectRespBody:  "http://example.com",
+		},
+		{
+			name:            "Invalid",
+			contentEncoding: "gzip",
+			requestBody:     []byte("not gzip"),
+			expectGzipResp:  false,
+			expectStatus:    http.StatusInternalServerError,
+			expectRespBody:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := func(w http.ResponseWriter, r *http.Request) {
+				if tt.name == "Invalid" {
+					assert.Fail(t, "handler should not be called for invalid gzip")
+					return
+				}
+				b, err := io.ReadAll(r.Body)
+				assert.NoError(t, err)
+				if tt.requestBody != nil {
+					assert.Equal(t, "http://example.com", string(b))
+				}
+				w.Write([]byte("http://example.com"))
+			}
+			req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(tt.requestBody))
+			if tt.acceptEncoding != "" {
+				req.Header.Set("Accept-Encoding", tt.acceptEncoding)
+			}
+			if tt.contentEncoding != "" {
+				req.Header.Set("Content-Encoding", tt.contentEncoding)
+			}
+			rec := httptest.NewRecorder()
+			GzipMiddleware(handler)(rec, req)
+			result := rec.Result()
+			defer result.Body.Close()
+			assert.Equal(t, tt.expectStatus, result.StatusCode)
+			if tt.expectGzipResp {
+				assert.Equal(t, "gzip", result.Header.Get("Content-Encoding"))
+				gr, err := gzip.NewReader(result.Body)
+				assert.NoError(t, err)
+				body, err := io.ReadAll(gr)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectRespBody, string(body))
+			} else {
+				body, err := io.ReadAll(result.Body)
+				assert.NoError(t, err)
+				if tt.expectRespBody != "" {
+					assert.Equal(t, tt.expectRespBody, string(body))
+				}
+			}
 		})
 	}
 }
