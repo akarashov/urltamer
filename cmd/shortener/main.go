@@ -28,8 +28,6 @@ func main() {
 	handler.Tamers = model.Tamers{}
 	handler.TamerCounter = 0
 	err := handler.Tamers.Load(cfg.FileStoragePath)
-	if err != nil {
-	}
 	handler.TamerCounter = len(handler.Tamers) 
 	mux := chi.NewRouter()
 	h := handler.New(cfg)
