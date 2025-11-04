@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/akarashov/urltamer/internal/config"
+	"github.com/akarashov/urltamer/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ func TestResponseEndpoint(t *testing.T) {
 		location   string
 	}
 
-	tamers["QAZwsxed"] = "http://example.com"
+	Tamers = append(Tamers, model.Tamer{UUID: 1, ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 
 	tests := []struct {
 		name string
@@ -76,7 +77,7 @@ func TestRequestEndpoint(t *testing.T) {
 		body       string
 	}
 
-	tamers["QAZwsxed"] = "http://example.com"
+	Tamers = append(Tamers, model.Tamer{UUID: 1, ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 
 	tests := []struct {
 		name string
@@ -133,11 +134,10 @@ func TestRequestJSONEndpoint(t *testing.T) {
 		body       string
 	}
 
-	for k := range tamers {
-		delete(tamers, k)
-	}
+	// clear tamers
+	Tamers = Tamers[:0]
 
-	tamers["QAZwsxed"] = "http://example.com"
+	Tamers = append(Tamers, model.Tamer{UUID: 1, ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 	tests := []struct {
 		name string
 		res  http.ResponseWriter

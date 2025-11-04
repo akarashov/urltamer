@@ -6,6 +6,7 @@ import (
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/akarashov/urltamer/internal/handler"
+	"github.com/akarashov/urltamer/internal/model"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -20,17 +21,26 @@ func main() {
 	if ecfg.Base != "" {
 		cfg.Base = ecfg.Base
 	}
-	
+	if ecfg.FileStoragePath != "" {
+		cfg.FileStoragePath = ecfg.FileStoragePath
+	}
+
+	handler.Tamers = model.Tamers{}
+	handler.TamerCounter = 0
+	err := handler.Tamers.Load(cfg.FileStoragePath)
+	if err != nil {
+	}
+	handler.TamerCounter = len(handler.Tamers) 
 	mux := chi.NewRouter()
 	h := handler.New(cfg)
 	mux.Post(`/api/shorten`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpoint), *log))
 	mux.Get(`/{tamer}`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.ResponseEndpoint), *log))
 	mux.Post(`/`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestEndpoint), *log))
 	log.Infow(
-        "Starting server",
-        "addr", cfg.Listen,
-    )
-	err := http.ListenAndServe(cfg.Listen, mux)
+		"Starting server",
+		"addr", cfg.Listen,
+	)
+	err = http.ListenAndServe(cfg.Listen, mux)
 	if err != nil {
 		log.Fatal(err)
 	}

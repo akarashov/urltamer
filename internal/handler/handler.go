@@ -8,24 +8,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/akarashov/urltamer/internal/config"
+	"github.com/akarashov/urltamer/internal/model"
+	"github.com/akarashov/urltamer/internal/repository"
 	"go.uber.org/zap"
 )
 
 var (
-	mutex  sync.Mutex
-	tamers = make(map[string]string)
+	mutex        sync.Mutex
+	Tamers       model.Tamers
+	TamerCounter int
 )
 
 const tamerLength = 8
 
 type (
 	Handler struct {
-		Base *string
+		Base     *string
+		FilePath string
 	}
 
 	responseData struct {
@@ -54,10 +59,33 @@ func makeTamer() string {
 	return tamer[:tamerLength]
 }
 
+func (h *Handler) WriteTamer(originalURL string) (string, error) {
+	tamer := makeTamer()
+	for _, it := range Tamers {
+		if it.ShortURL == tamer {
+			return tamer, fmt.Errorf("double URL")
+		}
+		if it.OriginalURL == originalURL {
+			return tamer, fmt.Errorf("double URL")
+		}
+	}
+	TamerCounter++
+	newTamer := model.Tamer{UUID: strconv.Itoa(TamerCounter), ShortURL: tamer, OriginalURL: originalURL}
+	Tamers = append(Tamers, newTamer)
+	if h != nil && h.FilePath != "" {
+		if err := repository.SaveToFile(Tamers, h.FilePath); err != nil {
+			return tamer, err
+		}
+	}
+
+	return tamer, nil
+}
+
 func New(c *config.Config) *Handler {
 	c.Base = strings.TrimRight(c.Base, "/")
 	return &Handler{
-		Base: &c.Base,
+		Base:     &c.Base,
+		FilePath: c.FileStoragePath,
 	}
 }
 
@@ -84,28 +112,20 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 	if request.URL == "" {
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
-		tamer := makeTamer()
-		if _, exist := tamers[tamer]; !exist {
-			for _, v := range tamers {
-				if request.URL == v {
-					http.Error(res, "Double URL", http.StatusBadRequest)
-					return
-				}
-			}
-			tamers[tamer] = request.URL
-
-			response.Result = fmt.Sprintf("%s/%s", *h.Base, tamer)
-			resp, err := json.Marshal(response)
-			if err != nil {
-				http.Error(res, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			res.Header().Set("Content-Type", "application/json")
-			res.WriteHeader(http.StatusCreated)
-			res.Write(resp)
-		} else {
-			http.Error(res, "Double Tamer", http.StatusBadRequest)
+		tamer, err := h.WriteTamer(request.URL)
+		if err != nil {
+			http.Error(res, "Double URL", http.StatusBadRequest)
+			return
 		}
+		response.Result = fmt.Sprintf("%s/%s", *h.Base, tamer)
+		resp, err := json.Marshal(response)
+		if err != nil {
+			http.Error(res, "Double URL", http.StatusInternalServerError)
+			return
+		}
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(http.StatusCreated)
+		res.Write(resp)
 	}
 }
 
@@ -117,21 +137,14 @@ func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 	if err != nil || reqURL == "" {
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
-		tamer := makeTamer()
-		if _, exist := tamers[tamer]; !exist {
-			for _, v := range tamers {
-				if reqURL == v {
-					http.Error(res, "Double URL", http.StatusBadRequest)
-					return
-				}
-			}
-			tamers[tamer] = reqURL
-			res.WriteHeader(http.StatusCreated)
-			res.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintf(res, "%s/%s", *h.Base, tamer)
-		} else {
-			http.Error(res, "Double Tamer", http.StatusBadRequest)
+		tamer, err := h.WriteTamer(reqURL)
+		if err != nil {
+			http.Error(res, "Double URL", http.StatusBadRequest)
+			return
 		}
+		res.WriteHeader(http.StatusCreated)
+		res.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(res, "%s/%s", *h.Base, tamer)
 	}
 }
 
@@ -139,11 +152,13 @@ func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	tamer := req.URL.Path[1:]
-	if reqURL, exist := tamers[tamer]; exist {
-		http.Redirect(res, req, reqURL, http.StatusTemporaryRedirect)
-	} else {
-		http.Error(res, "Not found", http.StatusBadRequest)
+	for _, it := range Tamers {
+		if it.ShortURL == tamer {
+			http.Redirect(res, req, it.OriginalURL, http.StatusTemporaryRedirect)
+			return
+		}
 	}
+	http.Error(res, "Not found", http.StatusBadRequest)
 }
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
