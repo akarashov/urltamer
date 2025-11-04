@@ -21,7 +21,7 @@ func TestResponseEndpoint(t *testing.T) {
 		location   string
 	}
 
-	Tamers = append(Tamers, model.Tamer{UUID: 1, ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
+	Tamers = append(Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 
 	tests := []struct {
 		name string
@@ -77,7 +77,7 @@ func TestRequestEndpoint(t *testing.T) {
 		body       string
 	}
 
-	Tamers = append(Tamers, model.Tamer{UUID: 1, ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
+	Tamers = append(Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 
 	tests := []struct {
 		name string
@@ -137,7 +137,7 @@ func TestRequestJSONEndpoint(t *testing.T) {
 	// clear tamers
 	Tamers = Tamers[:0]
 
-	Tamers = append(Tamers, model.Tamer{UUID: 1, ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
+	Tamers = append(Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 	tests := []struct {
 		name string
 		res  http.ResponseWriter
