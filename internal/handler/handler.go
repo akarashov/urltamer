@@ -19,18 +19,17 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	mutex        sync.Mutex
-	Tamers       model.Tamers
-	TamerCounter int
-)
 
 const tamerLength = 8
 
 type (
 	Handler struct {
-		Base     *string
-		FilePath string
+		Base         			*string
+		FilePath     			string
+		mutex        			sync.Mutex
+		Tamers      			model.Tamers
+		TamersMapOriginalURL 	model.TamersMap
+		TamersMapShortURL 		model.TamersMap
 	}
 
 	responseData struct {
@@ -59,33 +58,40 @@ func makeTamer() string {
 	return tamer[:tamerLength]
 }
 
+func (h *Handler) SaveTamersToFile() (error){
+		return repository.SaveToFile(h.Tamers, h.FilePath)
+}
+
 func (h *Handler) WriteTamer(originalURL string) (string, error) {
 	tamer := makeTamer()
-	for _, it := range Tamers {
-		if it.ShortURL == tamer {
-			return tamer, fmt.Errorf("double URL")
-		}
-		if it.OriginalURL == originalURL {
-			return tamer, fmt.Errorf("double URL")
-		}
+	if h.TamersMapOriginalURL[originalURL] || h.TamersMapShortURL[tamer] {
+		return tamer, fmt.Errorf("double URL")
+	} else {
+		h.TamersMapOriginalURL[originalURL] = true
+		h.TamersMapShortURL[tamer] = true
+		newTamer := model.Tamer{UUID: strconv.Itoa(len(h.TamersMapOriginalURL)), ShortURL: tamer, OriginalURL: originalURL}
+		h.Tamers = append(h.Tamers, newTamer)
+		return tamer, nil
 	}
-	TamerCounter++
-	newTamer := model.Tamer{UUID: strconv.Itoa(TamerCounter), ShortURL: tamer, OriginalURL: originalURL}
-	Tamers = append(Tamers, newTamer)
-	if h != nil && h.FilePath != "" {
-		if err := repository.SaveToFile(Tamers, h.FilePath); err != nil {
-			return tamer, err
-		}
-	}
-
-	return tamer, nil
 }
 
 func New(c *config.Config) *Handler {
 	c.Base = strings.TrimRight(c.Base, "/")
+	mc := model.Tamers{}
+	tmou := model.TamersMap{}
+	tmsu := model.TamersMap{}
+	err := mc.Load(c.FileStoragePath)
+	if err == nil {
+		for _, it := range mc {
+			tmsu[it.ShortURL], tmou[it.OriginalURL]=true,true
+		}
+	}
 	return &Handler{
 		Base:     &c.Base,
 		FilePath: c.FileStoragePath,
+		Tamers: mc,
+		TamersMapOriginalURL: tmou,
+		TamersMapShortURL: tmsu,
 	}
 }
 
@@ -98,8 +104,8 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 		http.Error(res, "Content-Type must be application/json", http.StatusBadRequest)
 		return
 	}
-	mutex.Lock()
-	defer mutex.Unlock()
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
@@ -117,6 +123,11 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 			http.Error(res, "Double URL", http.StatusBadRequest)
 			return
 		}
+		err = h.SaveTamersToFile()
+		if err != nil {
+			http.Error(res, "Error on save to file", http.StatusBadRequest)
+			return
+		}
 		response.Result = fmt.Sprintf("%s/%s", *h.Base, tamer)
 		resp, err := json.Marshal(response)
 		if err != nil {
@@ -130,8 +141,8 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 }
 
 func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	reqURLb, err := io.ReadAll(req.Body)
 	reqURL := string(reqURLb)
 	if err != nil || reqURL == "" {
@@ -142,6 +153,11 @@ func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 			http.Error(res, "Double URL", http.StatusBadRequest)
 			return
 		}
+		err = h.SaveTamersToFile()
+		if err != nil {
+			http.Error(res, "Error on save to file", http.StatusBadRequest)
+			return
+		}
 		res.WriteHeader(http.StatusCreated)
 		res.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(res, "%s/%s", *h.Base, tamer)
@@ -149,10 +165,10 @@ func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	tamer := req.URL.Path[1:]
-	for _, it := range Tamers {
+	for _, it := range h.Tamers {
 		if it.ShortURL == tamer {
 			http.Redirect(res, req, it.OriginalURL, http.StatusTemporaryRedirect)
 			return

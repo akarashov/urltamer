@@ -12,6 +12,8 @@ type Tamer struct {
 
 type Tamers []Tamer
 
+type TamersMap map[string]bool
+
 func (t *Tamers) Load(fname string) error {
     data, err := os.ReadFile(fname)
     if err != nil {

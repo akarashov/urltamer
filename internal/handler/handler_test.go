@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -20,9 +21,6 @@ func TestResponseEndpoint(t *testing.T) {
 		statusCode int
 		location   string
 	}
-
-	Tamers = append(Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
-
 	tests := []struct {
 		name string
 		res  http.ResponseWriter
@@ -63,6 +61,7 @@ func TestResponseEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080"})
+			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 			c.ResponseEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Equal(t, tt.want.location, result.Header().Get("Location"))
@@ -76,8 +75,7 @@ func TestRequestEndpoint(t *testing.T) {
 		statusCode int
 		body       string
 	}
-
-	Tamers = append(Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
+	tst_file := "./test.json"
 
 	tests := []struct {
 		name string
@@ -119,13 +117,17 @@ func TestRequestEndpoint(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080"})
+			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tst_file})
+			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 			c.RequestEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Contains(t, result.Body.String(), tt.want.body)
 			assert.Equal(t, tt.want.statusCode, result.Code)
+			
 		})
+		
 	}
+	os.Remove(tst_file)
 }
 
 func TestRequestJSONEndpoint(t *testing.T) {
@@ -133,11 +135,8 @@ func TestRequestJSONEndpoint(t *testing.T) {
 		statusCode int
 		body       string
 	}
+	tst_file := "./test.json"
 
-	// clear tamers
-	Tamers = Tamers[:0]
-
-	Tamers = append(Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 	tests := []struct {
 		name string
 		res  http.ResponseWriter
@@ -178,7 +177,8 @@ func TestRequestJSONEndpoint(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080"})
+			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tst_file})
+			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 			tt.req.Header.Set("Content-Type", "application/json")
 			c.RequestJSONEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
@@ -194,6 +194,7 @@ func TestRequestJSONEndpoint(t *testing.T) {
 
 		})
 	}
+	os.Remove(tst_file)
 }
 
 func TestGzipMiddleware(t *testing.T) {

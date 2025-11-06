@@ -7,8 +7,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// var sugar zap.SugaredLogger
-
 type Config struct {
 	Listen string `env:"SERVER_ADDRESS"`
 	Base   string `env:"BASE_URL"`
