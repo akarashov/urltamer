@@ -75,7 +75,7 @@ func TestRequestEndpoint(t *testing.T) {
 		statusCode int
 		body       string
 	}
-	tst_file := "./test.json"
+	tstFile := "./test.json"
 
 	tests := []struct {
 		name string
@@ -117,7 +117,7 @@ func TestRequestEndpoint(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tst_file})
+			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tstFile})
 			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 			c.RequestEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
@@ -127,7 +127,7 @@ func TestRequestEndpoint(t *testing.T) {
 		})
 		
 	}
-	os.Remove(tst_file)
+	os.Remove(tstFile)
 }
 
 func TestRequestJSONEndpoint(t *testing.T) {
@@ -135,7 +135,7 @@ func TestRequestJSONEndpoint(t *testing.T) {
 		statusCode int
 		body       string
 	}
-	tst_file := "./test.json"
+	tstFile := "./test.json"
 
 	tests := []struct {
 		name string
@@ -177,7 +177,7 @@ func TestRequestJSONEndpoint(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tst_file})
+			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tstFile})
 			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
 			tt.req.Header.Set("Content-Type", "application/json")
 			c.RequestJSONEndpoint(tt.res, tt.req)
@@ -194,7 +194,7 @@ func TestRequestJSONEndpoint(t *testing.T) {
 
 		})
 	}
-	os.Remove(tst_file)
+	os.Remove(tstFile)
 }
 
 func TestGzipMiddleware(t *testing.T) {
