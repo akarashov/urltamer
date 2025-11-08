@@ -19,7 +19,7 @@ func New() *Config {
 	flag.StringVar(&c.Listen, "a", ":8080", "Listen on")
 	flag.StringVar(&c.Base, "b", "http://127.0.0.1:8080/", "Base address")
 	flag.StringVar(&c.FileStoragePath, "f", "./tamers.json", "File storage path")
-	flag.StringVar(&c.DataBaseDSN, "d", "192.168.0.201", "Data Base DSN")
+	flag.StringVar(&c.DataBaseDSN, "d", "postgres://admin:admin@192.168.0.20:5432/demo?sslmode=disable", "Data Base DSN")
 	return c
 }
 

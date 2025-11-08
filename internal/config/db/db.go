@@ -3,15 +3,14 @@ package db
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	// "fmt"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func Connect(dataBaseDSN string) bool{
-    ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", dataBaseDSN, `admin`, `admin`, `demo`)
-    db, err := sql.Open("pgx", ps)
+    db, err := sql.Open("pgx", dataBaseDSN)
     if err != nil {
 		return false
     }
