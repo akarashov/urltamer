@@ -11,7 +11,7 @@ type Config struct {
 	Listen string `env:"SERVER_ADDRESS"`
 	Base   string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-
+	DataBaseDSN string `env:"DATABASE_DSN"`
 }
 
 func New() *Config {
@@ -19,6 +19,7 @@ func New() *Config {
 	flag.StringVar(&c.Listen, "a", ":8080", "Listen on")
 	flag.StringVar(&c.Base, "b", "http://127.0.0.1:8080/", "Base address")
 	flag.StringVar(&c.FileStoragePath, "f", "./tamers.json", "File storage path")
+	flag.StringVar(&c.DataBaseDSN, "d", "postgres://admin:admin@192.168.0.20:5432/demo?sslmode=disable", "Data Base DSN")
 	return c
 }
 

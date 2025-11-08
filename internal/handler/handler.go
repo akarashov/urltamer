@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/akarashov/urltamer/internal/config"
+	"github.com/akarashov/urltamer/internal/config/db"
 	"github.com/akarashov/urltamer/internal/model"
 	"github.com/akarashov/urltamer/internal/repository"
 	"go.uber.org/zap"
@@ -30,6 +31,7 @@ type (
 		Tamers      			model.Tamers
 		TamersMapOriginalURL 	model.TamersMap
 		TamersMapShortURL 		model.TamersMap
+		DataBaseDSN				string
 	}
 
 	responseData struct {
@@ -92,6 +94,7 @@ func New(c *config.Config) *Handler {
 		Tamers: mc,
 		TamersMapOriginalURL: tmou,
 		TamersMapShortURL: tmsu,
+		DataBaseDSN: c.DataBaseDSN,
 	}
 }
 
@@ -175,6 +178,18 @@ func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	http.Error(res, "Not found", http.StatusBadRequest)
+}
+
+
+func (h *Handler) PingEndpoint(res http.ResponseWriter, req *http.Request) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	if db.Connect(h.DataBaseDSN) {
+		res.WriteHeader(http.StatusOK)
+		return
+	} else {
+		http.Error(res, "Not connected to DB", http.StatusInternalServerError)
+	}
 }
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {

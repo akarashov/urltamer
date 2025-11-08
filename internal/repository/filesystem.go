@@ -14,3 +14,4 @@ func SaveToFile(tamers model.Tamers, fileName string) error {
 	}
 	return os.WriteFile(fileName, data, 0666)
 }
+
