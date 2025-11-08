@@ -20,16 +20,20 @@ func main() {
 	if ecfg.Base != "" {
 		cfg.Base = ecfg.Base
 	}
+	if ecfg.FileStoragePath != "" {
+		cfg.FileStoragePath = ecfg.FileStoragePath
+	}
 	
-	mux := chi.NewRouter()
 	h := handler.New(cfg)
+	mux := chi.NewRouter()
+	
 	mux.Post(`/api/shorten`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpoint), *log))
 	mux.Get(`/{tamer}`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.ResponseEndpoint), *log))
 	mux.Post(`/`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestEndpoint), *log))
 	log.Infow(
-        "Starting server",
-        "addr", cfg.Listen,
-    )
+		"Starting server",
+		"addr", cfg.Listen,
+	)
 	err := http.ListenAndServe(cfg.Listen, mux)
 	if err != nil {
 		log.Fatal(err)

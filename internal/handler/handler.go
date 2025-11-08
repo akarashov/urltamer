@@ -8,24 +8,28 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/akarashov/urltamer/internal/config"
+	"github.com/akarashov/urltamer/internal/model"
+	"github.com/akarashov/urltamer/internal/repository"
 	"go.uber.org/zap"
 )
 
-var (
-	mutex  sync.Mutex
-	tamers = make(map[string]string)
-)
 
 const tamerLength = 8
 
 type (
 	Handler struct {
-		Base *string
+		Base         			*string
+		FilePath     			string
+		mutex        			sync.Mutex
+		Tamers      			model.Tamers
+		TamersMapOriginalURL 	model.TamersMap
+		TamersMapShortURL 		model.TamersMap
 	}
 
 	responseData struct {
@@ -54,10 +58,40 @@ func makeTamer() string {
 	return tamer[:tamerLength]
 }
 
+func (h *Handler) SaveTamersToFile() (error){
+		return repository.SaveToFile(h.Tamers, h.FilePath)
+}
+
+func (h *Handler) WriteTamer(originalURL string) (string, error) {
+	tamer := makeTamer()
+	if h.TamersMapOriginalURL[originalURL] || h.TamersMapShortURL[tamer] {
+		return tamer, fmt.Errorf("double URL")
+	} else {
+		h.TamersMapOriginalURL[originalURL] = true
+		h.TamersMapShortURL[tamer] = true
+		newTamer := model.Tamer{UUID: strconv.Itoa(len(h.TamersMapOriginalURL)), ShortURL: tamer, OriginalURL: originalURL}
+		h.Tamers = append(h.Tamers, newTamer)
+		return tamer, nil
+	}
+}
+
 func New(c *config.Config) *Handler {
 	c.Base = strings.TrimRight(c.Base, "/")
+	mc := model.Tamers{}
+	tmou := model.TamersMap{}
+	tmsu := model.TamersMap{}
+	err := mc.Load(c.FileStoragePath)
+	if err == nil {
+		for _, it := range mc {
+			tmsu[it.ShortURL], tmou[it.OriginalURL]=true,true
+		}
+	}
 	return &Handler{
-		Base: &c.Base,
+		Base:     &c.Base,
+		FilePath: c.FileStoragePath,
+		Tamers: mc,
+		TamersMapOriginalURL: tmou,
+		TamersMapShortURL: tmsu,
 	}
 }
 
@@ -70,8 +104,8 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 		http.Error(res, "Content-Type must be application/json", http.StatusBadRequest)
 		return
 	}
-	mutex.Lock()
-	defer mutex.Unlock()
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
@@ -84,66 +118,63 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 	if request.URL == "" {
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
-		tamer := makeTamer()
-		if _, exist := tamers[tamer]; !exist {
-			for _, v := range tamers {
-				if request.URL == v {
-					http.Error(res, "Double URL", http.StatusBadRequest)
-					return
-				}
-			}
-			tamers[tamer] = request.URL
-
-			response.Result = fmt.Sprintf("%s/%s", *h.Base, tamer)
-			resp, err := json.Marshal(response)
-			if err != nil {
-				http.Error(res, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			res.Header().Set("Content-Type", "application/json")
-			res.WriteHeader(http.StatusCreated)
-			res.Write(resp)
-		} else {
-			http.Error(res, "Double Tamer", http.StatusBadRequest)
+		tamer, err := h.WriteTamer(request.URL)
+		if err != nil {
+			http.Error(res, "Double URL", http.StatusBadRequest)
+			return
 		}
+		err = h.SaveTamersToFile()
+		if err != nil {
+			http.Error(res, "Error on save to file", http.StatusBadRequest)
+			return
+		}
+		response.Result = fmt.Sprintf("%s/%s", *h.Base, tamer)
+		resp, err := json.Marshal(response)
+		if err != nil {
+			http.Error(res, "Double URL", http.StatusInternalServerError)
+			return
+		}
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(http.StatusCreated)
+		res.Write(resp)
 	}
 }
 
 func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	reqURLb, err := io.ReadAll(req.Body)
 	reqURL := string(reqURLb)
 	if err != nil || reqURL == "" {
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
-		tamer := makeTamer()
-		if _, exist := tamers[tamer]; !exist {
-			for _, v := range tamers {
-				if reqURL == v {
-					http.Error(res, "Double URL", http.StatusBadRequest)
-					return
-				}
-			}
-			tamers[tamer] = reqURL
-			res.WriteHeader(http.StatusCreated)
-			res.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintf(res, "%s/%s", *h.Base, tamer)
-		} else {
-			http.Error(res, "Double Tamer", http.StatusBadRequest)
+		tamer, err := h.WriteTamer(reqURL)
+		if err != nil {
+			http.Error(res, "Double URL", http.StatusBadRequest)
+			return
 		}
+		err = h.SaveTamersToFile()
+		if err != nil {
+			http.Error(res, "Error on save to file", http.StatusBadRequest)
+			return
+		}
+		res.WriteHeader(http.StatusCreated)
+		res.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(res, "%s/%s", *h.Base, tamer)
 	}
 }
 
 func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	tamer := req.URL.Path[1:]
-	if reqURL, exist := tamers[tamer]; exist {
-		http.Redirect(res, req, reqURL, http.StatusTemporaryRedirect)
-	} else {
-		http.Error(res, "Not found", http.StatusBadRequest)
+	for _, it := range h.Tamers {
+		if it.ShortURL == tamer {
+			http.Redirect(res, req, it.OriginalURL, http.StatusTemporaryRedirect)
+			return
+		}
 	}
+	http.Error(res, "Not found", http.StatusBadRequest)
 }
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
