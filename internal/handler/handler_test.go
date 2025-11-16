@@ -41,7 +41,7 @@ func TestResponseEndpoint(t *testing.T) {
 		req:  httptest.NewRequest(http.MethodGet, "/QAZwsxrf", nil),
 		want: want{
 			statusCode: http.StatusBadRequest,
-			location:   "/",
+			location:   "",
 		},
 	}, {
 		name: "Valid_Tamer_with_query",
@@ -56,7 +56,7 @@ func TestResponseEndpoint(t *testing.T) {
 		req:  httptest.NewRequest(http.MethodGet, "/", nil),
 		want: want{
 			statusCode: http.StatusBadRequest,
-			location:   "/",
+			location:   "",
 		},
 	}}
 	for _, tt := range tests {
