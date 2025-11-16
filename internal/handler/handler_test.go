@@ -3,7 +3,9 @@ package handler
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
+
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +14,8 @@ import (
 	"testing"
 
 	"github.com/akarashov/urltamer/internal/config"
-	"github.com/akarashov/urltamer/internal/model"
+	"github.com/akarashov/urltamer/internal/repository"
+	"github.com/akarashov/urltamer/internal/service"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,42 +30,51 @@ func TestResponseEndpoint(t *testing.T) {
 		req  *http.Request
 		want want
 	}{{
-		name: "Valid Tamer",
+		name: "Valid_Tamer",
 		res:  httptest.NewRecorder(),
-		req:  httptest.NewRequest(http.MethodGet, "/QAZwsxed", nil),
 		want: want{
 			statusCode: http.StatusTemporaryRedirect,
 			location:   "http://example.com",
 		}}, {
-		name: "inValid Tamer",
+		name: "inValid_Tamer",
 		res:  httptest.NewRecorder(),
 		req:  httptest.NewRequest(http.MethodGet, "/QAZwsxrf", nil),
 		want: want{
 			statusCode: http.StatusBadRequest,
-			location:   "",
+			location:   "/",
 		},
 	}, {
-		name: "Valid Tamer with query",
+		name: "Valid_Tamer_with_query",
 		res:  httptest.NewRecorder(),
-		req:  httptest.NewRequest(http.MethodGet, "/QAZwsxed?iddqd=idkfa", nil),
 		want: want{
 			statusCode: http.StatusTemporaryRedirect,
 			location:   "http://example.com",
 		},
 	}, {
-		name: "Blank Tamer",
+		name: "Blank_Tamer",
 		res:  httptest.NewRecorder(),
 		req:  httptest.NewRequest(http.MethodGet, "/", nil),
 		want: want{
 			statusCode: http.StatusBadRequest,
-			location:   "",
+			location:   "/",
 		},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080"})
-			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
-			c.ResponseEndpoint(tt.res, tt.req)
+			cfg := &config.Config{Listen: ":8080", Base: "http://127.0.0.1:8080/", FileStoragePath: "", DataBaseDSN: ""}
+			repo, _ := repository.NewRepository(repository.Config{Type: repository.MemoryType})
+			service := service.NewURLService(repo)
+			ctx := context.Background()
+			h := New(cfg, service, ctx)
+			h.Service.CreateShortURL(ctx, tt.want.location)
+			orig, _ := h.Service.GetAllURLs(h.Context)
+			if tt.name == "Valid_Tamer" {
+				tt.req = httptest.NewRequest(http.MethodGet, "/"+orig[0].ShortURL, nil)
+			}
+			if tt.name == "Valid_Tamer_with_query" {
+				tt.req = httptest.NewRequest(http.MethodGet, "/"+orig[0].ShortURL + "?iddqd=idkfa", nil)
+			}
+			h.ResponseEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Equal(t, tt.want.location, result.Header().Get("Location"))
 			assert.Equal(t, tt.want.statusCode, result.Code)
@@ -75,8 +87,6 @@ func TestRequestEndpoint(t *testing.T) {
 		statusCode int
 		body       string
 	}
-	tstFile := "./test.json"
-
 	tests := []struct {
 		name string
 		res  http.ResponseWriter
@@ -117,17 +127,20 @@ func TestRequestEndpoint(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tstFile})
-			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
-			c.RequestEndpoint(tt.res, tt.req)
+			cfg := &config.Config{Listen: ":8080", Base: "http://127.0.0.1:8080/", FileStoragePath: "", DataBaseDSN: ""}
+			repo, _ := repository.NewRepository(repository.Config{Type: repository.MemoryType})
+			service := service.NewURLService(repo)
+			ctx := context.Background()
+			h := New(cfg, service, ctx)
+			h.Service.CreateShortURL(ctx, "http://example.com")
+			h.RequestEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Contains(t, result.Body.String(), tt.want.body)
 			assert.Equal(t, tt.want.statusCode, result.Code)
-			
+
 		})
-		
+
 	}
-	os.Remove(tstFile)
 }
 
 func TestRequestJSONEndpoint(t *testing.T) {
@@ -177,10 +190,14 @@ func TestRequestJSONEndpoint(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := New(&config.Config{Base: "http://127.0.0.1:8080/", Listen: ":8080", FileStoragePath: tstFile})
-			c.Tamers = append(c.Tamers, model.Tamer{UUID: "1", ShortURL: "QAZwsxed", OriginalURL: "http://example.com"})
+			cfg := &config.Config{Listen: ":8080", Base: "http://127.0.0.1:8080/", FileStoragePath: "", DataBaseDSN: ""}
+			repo, _ := repository.NewRepository(repository.Config{Type: repository.MemoryType})
+			service := service.NewURLService(repo)
+			ctx := context.Background()
+			h := New(cfg, service, ctx)
+			h.Service.CreateShortURL(ctx, "http://example.com")
 			tt.req.Header.Set("Content-Type", "application/json")
-			c.RequestJSONEndpoint(tt.res, tt.req)
+			h.RequestJSONEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Equal(t, tt.want.statusCode, result.Code)
 			if tt.name == "Double URL" || tt.name == "Blank URL" {
