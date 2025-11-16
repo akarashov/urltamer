@@ -1,0 +1,15 @@
+package repository
+
+import (
+	"context"
+	"github.com/akarashov/urltamer/internal/model"
+)
+
+type Repository interface {
+	LoadTamers(ctx context.Context) (model.Tamers, error)
+	InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error)
+	GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error)
+	GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error)
+	Ping(ctx context.Context) bool 
+	Close() error
+}
