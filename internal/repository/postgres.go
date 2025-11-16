@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/akarashov/urltamer/internal/model"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -27,7 +30,25 @@ func NewPostgresRepository(dataBaseDSN string) (*PostgresRepository, error) {
 	if err = db.PingContext(ctx); err != nil {
 		return nil, err
 	}
+
+	err = makeMigraton("file://migrations", dataBaseDSN)// migrate
+	if err != nil {
+		return &PostgresRepository{db: db}, err
+	}
+
 	return &PostgresRepository{db: db}, nil
+}
+
+func makeMigraton(pathMigrations string, dataBaseDSN string) error {
+	m, err := migrate.New(pathMigrations, dataBaseDSN)
+	if err != nil {
+		return err
+	}
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }
 
 func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, error) {
