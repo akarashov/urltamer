@@ -37,23 +37,24 @@ func (j *JSONFileRepository) open() error {
 	defer j.mutex.Unlock()
 	file, err := os.ReadFile(j.filename)
 	if err != nil {
-		return err
-	}
-	tamers := model.Tamers{}
-	err = json.Unmarshal(file, &tamers)
-	if err != nil {
-		return err
-	}
-	for _, t := range tamers {
-		id, err := strconv.Atoi(t.ID)
+		return nil
+	} else {
+		tamers := model.Tamers{}
+		err = json.Unmarshal(file, &tamers)
 		if err != nil {
 			return err
 		}
-		j.data[id] = t
-		j.URL[t.OriginalURL] = id
-		j.ID = id + 1
+		for _, t := range tamers {
+			id, err := strconv.Atoi(t.ID)
+			if err != nil {
+				return err
+			}
+			j.data[id] = t
+			j.URL[t.OriginalURL] = id
+			j.ID = id + 1
+		}
+		return nil
 	}
-	return nil
 }
 
 func (j *JSONFileRepository) save() error {
