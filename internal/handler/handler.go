@@ -48,7 +48,7 @@ func New(c *config.Config, s *service.URLService, ctx context.Context) *Handler 
 	c.Base = strings.TrimRight(c.Base, "/")
 	mc, err := s.GetAllURLs(ctx)
 	if err != nil {
-		log.Fatalf("%s", err)
+		log.Printf("Fatality %s", err)
 	}
 	return &Handler{
 		Service:     s,

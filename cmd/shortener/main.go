@@ -32,15 +32,16 @@ func main() {
 	if ecfg.FileStoragePath != "" {
 		cfg.FileStoragePath = ecfg.FileStoragePath
 	}
-	repo, err := repository.NewRepository(repository.Config{Type: repository.MemoryType,})
+
+	repo, err := repository.NewRepository(repository.Config{Type: repository.MemoryType})
 	if cfg.DataBaseDSN != "" {
-		repo, err = repository.NewRepository(repository.Config{Type: repository.PostgresType, DSN: cfg.DataBaseDSN,})
+		repo, err = repository.NewRepository(repository.Config{Type: repository.PostgresType, DSN: cfg.DataBaseDSN})
 	} else if cfg.FileStoragePath != "" {
-		repo, err = repository.NewRepository(repository.Config{Type: repository.JSONType, Filename: cfg.FileStoragePath,})
+		repo, err = repository.NewRepository(repository.Config{Type: repository.JSONType, Filename: cfg.FileStoragePath})
 	}
 	defer repo.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Errorf("EEEEEEE %s\n",err)
 	}
 	service := service.NewURLService(repo)
 	ctx := context.Background()
