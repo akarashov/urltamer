@@ -48,6 +48,7 @@ func main() {
 	h := handler.New(cfg, service, ctx)
 	mux := chi.NewRouter()
 	mux.Post(`/api/shorten`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpoint), *log))
+	mux.Post(`/api/shorten/batch`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpointBatch), *log))
 	mux.Get(`/{tamer}`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.ResponseEndpoint), *log))
 	mux.Get(`/ping`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.PingEndpoint), *log))
 	mux.Post(`/`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestEndpoint), *log))
