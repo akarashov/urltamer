@@ -19,10 +19,10 @@ import (
 
 type (
 	Handler struct {
-		Service     *service.URLService
-		Context     context.Context
-		Base        *string
-		Tamers      model.Tamers
+		Service *service.URLService
+		Context context.Context
+		Base    *string
+		Tamers  model.Tamers
 	}
 
 	responseData struct {
@@ -51,10 +51,10 @@ func New(c *config.Config, s *service.URLService, ctx context.Context) *Handler 
 		log.Printf("Fatality %s", err)
 	}
 	return &Handler{
-		Service:     s,
-		Context:     ctx,
-		Base:        &c.Base,
-		Tamers:      mc,
+		Service: s,
+		Context: ctx,
+		Base:    &c.Base,
+		Tamers:  mc,
 	}
 }
 
@@ -94,6 +94,45 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 		res.WriteHeader(http.StatusCreated)
 		res.Write(resp)
 	}
+}
+
+func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Request) {
+	var requestBatchs model.RequestBatchs
+	var response model.ResponseBatchs
+	var buf bytes.Buffer
+
+	if req.Header.Get("Content-Type") != "application/json" {
+		http.Error(res, "Content-Type must be application/json", http.StatusBadRequest)
+		return
+	}
+	_, err := buf.ReadFrom(req.Body)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = json.Unmarshal(buf.Bytes(), &requestBatchs); err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+	for _, requestBatch := range requestBatchs {
+		tamer, err := h.Service.CreateShortURL(h.Context, requestBatch.OriginalURL)
+		if err != nil {
+			http.Error(res, "Double URL", http.StatusBadRequest)
+			break
+		}
+		rsp := model.ResponseBatch{
+			CorrelationID: requestBatch.CorrelationID,
+			ShortURL:      fmt.Sprintf("%s/%s", *h.Base, tamer.ShortURL)}
+		response = append(response, rsp)
+	}
+	resp, err := json.Marshal(response)
+	if err != nil {
+		http.Error(res, "Double URL", http.StatusInternalServerError)
+		return
+	}
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+	res.Write(resp)
 }
 
 func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
