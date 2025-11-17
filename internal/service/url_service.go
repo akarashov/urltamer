@@ -72,3 +72,8 @@ func (s *URLService) GetAllURLs(ctx context.Context) (model.Tamers, error) {
 func (s *URLService) Ping(ctx context.Context) bool {
 	return s.repo.Ping(ctx)
 }
+
+func (s *URLService) GetTamerByOriginalURL(ctx context.Context, originalURL string) (string, error) {
+	tamer, err := s.repo.GetTamerByOriginalURL(ctx, originalURL)
+	return tamer.ShortURL, err
+}

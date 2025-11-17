@@ -81,13 +81,26 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 	} else {
 		tamer, err := h.Service.CreateShortURL(h.Context, request.URL)
 		if err != nil {
-			http.Error(res, "Double URL", http.StatusBadRequest)
+			shortURL, err := h.Service.GetTamerByOriginalURL(h.Context, request.URL)
+			if err != nil{
+			http.Error(res, "Double URL", http.StatusConflict)
+			return
+			}
+			response.Result = fmt.Sprintf("%s/%s", *h.Base, shortURL)
+			resp, err := json.Marshal(response)
+			if err != nil {
+				http.Error(res, "Error on marshaling", http.StatusInternalServerError)
+				return
+			}
+			res.Header().Set("Content-Type", "application/json")
+			res.WriteHeader(http.StatusConflict)
+			res.Write(resp)
 			return
 		}
 		response.Result = fmt.Sprintf("%s/%s", *h.Base, tamer.ShortURL)
 		resp, err := json.Marshal(response)
 		if err != nil {
-			http.Error(res, "Double URL", http.StatusInternalServerError)
+			http.Error(res, "Error on marshaling", http.StatusInternalServerError)
 			return
 		}
 		res.Header().Set("Content-Type", "application/json")
@@ -117,7 +130,7 @@ func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Re
 	for _, requestBatch := range requestBatchs {
 		tamer, err := h.Service.CreateShortURL(h.Context, requestBatch.OriginalURL)
 		if err != nil {
-			http.Error(res, "Double URL", http.StatusBadRequest)
+			http.Error(res, "Double URL", http.StatusInternalServerError)
 			break
 		}
 		rsp := model.ResponseBatch{
@@ -127,7 +140,7 @@ func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Re
 	}
 	resp, err := json.Marshal(response)
 	if err != nil {
-		http.Error(res, "Double URL", http.StatusInternalServerError)
+		http.Error(res, "Error on marshaling", http.StatusInternalServerError)
 		return
 	}
 	res.Header().Set("Content-Type", "application/json")
@@ -143,9 +156,16 @@ func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 	} else {
 		tamer, err := h.Service.CreateShortURL(h.Context, reqURL)
 		if err != nil {
-			http.Error(res, "Double URL", http.StatusBadRequest)
+			shortURL, err := h.Service.GetTamerByOriginalURL(h.Context, reqURL)
+			if err != nil{
+			http.Error(res, "Double URL", http.StatusConflict)
 			return
-		}
+			}
+			res.WriteHeader(http.StatusConflict)
+			res.Header().Set("Content-Type", "text/plain")
+			fmt.Fprintf(res, "%s/%s", *h.Base, shortURL)
+			return
+			}
 		res.WriteHeader(http.StatusCreated)
 		res.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(res, "%s/%s", *h.Base, tamer.ShortURL)
