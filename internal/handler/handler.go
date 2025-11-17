@@ -121,7 +121,7 @@ func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Re
 			break
 		}
 		rsp := model.ResponseBatch{
-			CorrelationId: requestBatch.CorrelationId,
+			CorrelationID: requestBatch.CorrelationID,
 			ShortURL:      fmt.Sprintf("%s/%s", *h.Base, tamer.ShortURL)}
 		response = append(response, rsp)
 	}
