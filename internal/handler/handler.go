@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-	"errors"
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/akarashov/urltamer/internal/model"
@@ -59,15 +59,13 @@ func New(c *config.Config, s *service.URLService, ctx context.Context) *Handler 
 	}
 }
 
-func (h *Handler) isConflictResolver(res http.ResponseWriter, err error) bool {
+func (h *Handler) isConflictResolver(err error) (int, bool) {
 	if err == nil {
-		res.WriteHeader(http.StatusCreated)
-		return true
+		return http.StatusCreated, true
 	} else if errors.Is(err, service.ErrURLAlreadyExists) {
-		res.WriteHeader(http.StatusConflict)
-		return true
+		return http.StatusConflict, true
 	} else {
-		return false
+		return 0, false
 	}
 }
 
@@ -93,7 +91,8 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
 		tamer, err := h.Service.CreateShortURL(h.Context, request.URL)
-		if !h.isConflictResolver(res, err) {
+		status, ok := h.isConflictResolver(err)
+		if !ok {
 			http.Error(res, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -104,6 +103,7 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 			return
 		}
 		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(status)
 		res.Write(resp)
 	}
 }
@@ -126,11 +126,17 @@ func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Re
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	var batchStatus int = http.StatusCreated
 	for _, requestBatch := range requestBatchs {
 		tamer, err := h.Service.CreateShortURL(h.Context, requestBatch.OriginalURL)
-		if !h.isConflictResolver(res, err) {
+		status, ok := h.isConflictResolver(err)
+		if !ok {
 			http.Error(res, "Internal Server Error", http.StatusInternalServerError)
 			return
+		}
+		if status == http.StatusConflict {
+			batchStatus = http.StatusConflict
 		}
 		rsp := model.ResponseBatch{
 			CorrelationID: requestBatch.CorrelationID,
@@ -143,9 +149,9 @@ func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Re
 		return
 	}
 	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(batchStatus)
 	res.Write(resp)
 }
-
 
 func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 	reqURLb, err := io.ReadAll(req.Body)
@@ -154,12 +160,15 @@ func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
 		tamer, err := h.Service.CreateShortURL(h.Context, reqURL)
-		if !h.isConflictResolver(res, err) {
+		status, ok := h.isConflictResolver(err)
+		if !ok {
 			http.Error(res, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		res.Header().Set("Content-Type", "text/plain")
-		fmt.Fprintf(res, "%s/%s", *h.Base, tamer.ShortURL)
+		res.WriteHeader(status)
+		resp := []byte(fmt.Sprintf("%s/%s", *h.Base, tamer.ShortURL))
+		res.Write(resp)
 	}
 }
 
