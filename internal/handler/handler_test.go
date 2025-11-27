@@ -113,8 +113,8 @@ func TestRequestEndpoint(t *testing.T) {
 			res:  httptest.NewRecorder(),
 			req:  httptest.NewRequest(http.MethodPost, "/", strings.NewReader("http://example.com")),
 			want: want{
-				statusCode: http.StatusBadRequest,
-				body:       "Double URL",
+				statusCode: http.StatusConflict,
+				body:       "http://127.0.0.1:8080/",
 			},
 		}, {
 			name: "Long URL",
@@ -176,8 +176,8 @@ func TestRequestJSONEndpoint(t *testing.T) {
 			res:  httptest.NewRecorder(),
 			req:  httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url":"http://example.com"}`)),
 			want: want{
-				statusCode: http.StatusBadRequest,
-				body:       "Double URL",
+				statusCode: http.StatusConflict,
+				body:       "http://127.0.0.1:8080/",
 			},
 		}, {
 			name: "Long URL",

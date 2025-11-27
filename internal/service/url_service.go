@@ -9,6 +9,11 @@ import (
 	"github.com/akarashov/urltamer/internal/utils"
 )
 
+var ErrURLAlreadyExists = errors.New("URL already exists")
+var ErrShortURLConflict = errors.New("short URL conflict")
+var ErrShortURLNotFound =errors.New("short URL not found")
+
+
 type URLService struct {
 	repo repository.Repository
 }
@@ -23,7 +28,7 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string) (*m
 		return nil, err
 	}
 	if existing != nil {
-		return existing, errors.New("URL already exists")
+		return existing, ErrURLAlreadyExists
 	}
 	shortURL, err := s.generateUniqueShortURL(ctx)
 	if err != nil {
@@ -51,7 +56,7 @@ func (s *URLService) generateUniqueShortURL(ctx context.Context) (string, error)
 			return shortURL, nil
 		}
 	}
-	return "", errors.New("short URL conflict")
+	return "", ErrShortURLConflict
 }
 
 func (s *URLService) GetOriginalURL(ctx context.Context, shortURL string) (string, error) {
@@ -60,7 +65,7 @@ func (s *URLService) GetOriginalURL(ctx context.Context, shortURL string) (strin
 		return "", err
 	}
 	if tamer == nil {
-		return "", errors.New("short URL not found")
+		return "", ErrShortURLNotFound
 	}
 	return tamer.OriginalURL, nil
 }
@@ -71,4 +76,9 @@ func (s *URLService) GetAllURLs(ctx context.Context) (model.Tamers, error) {
 
 func (s *URLService) Ping(ctx context.Context) bool {
 	return s.repo.Ping(ctx)
+}
+
+func (s *URLService) GetTamerByOriginalURL(ctx context.Context, originalURL string) (string, error) {
+	tamer, err := s.repo.GetTamerByOriginalURL(ctx, originalURL)
+	return tamer.ShortURL, err
 }
