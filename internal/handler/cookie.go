@@ -16,18 +16,18 @@ type Claims struct {
 	UserID int
 }
 
-const COOKIE_NAME = "userId"
-const TOKEN_EXP = time.Hour * 3
-const SECRET_KEY = "supersecretkey"
+const cookieName = "userId"
+const tokenExp = time.Hour * 3
+const secretKey = "supersecretkey"
 
-func BuildJWTString(user_id int, secret_key string, exp_time time.Duration) (string, error) {
+func BuildJWTString(userId int, secretKey string, expTime time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(exp_time)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expTime)),
 		},
-		UserID: user_id,
+		UserID: userId,
 	})
-	JWT, err := token.SignedString([]byte(secret_key))
+	JWT, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return "", err
 	}
@@ -41,7 +41,7 @@ func GetUserID(tokenString string) int {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
-			return []byte(SECRET_KEY), nil
+			return []byte(secretKey), nil
 		})
 	if err != nil {
 		return -1
@@ -69,17 +69,17 @@ func generateUserID() int {
 
 func CookieMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-		cookie, err := req.Cookie(COOKIE_NAME)
+		cookie, err := req.Cookie(cookieName)
 		// llll := GetUserID(cookie.Value)
 		// log.Println("Cooooooookie: %s|| %s", err, llll)
 		if err != nil || GetUserID(cookie.Value) <= 0 {
-			user_id := generateUserID()
+			userId := generateUserID()
 			// fmt.Printf("################# user_id =  %d\n", user_id)
-			cookie_text, err := BuildJWTString(user_id, SECRET_KEY, TOKEN_EXP)
+			cookieText, err := BuildJWTString(userId, secretKey, tokenExp)
 			if err == nil {
 				http.SetCookie(res, &http.Cookie{
-					Name:  COOKIE_NAME,
-					Value: cookie_text,
+					Name:  cookieName,
+					Value: cookieText,
 				})
 			} else {
 				log.Println("Error generating JWT token: ", err)

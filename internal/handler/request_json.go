@@ -37,7 +37,7 @@ func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request
 		http.Error(res, "Error body parse", http.StatusBadRequest)
 	} else {
 		uid := generateUserID()
-		if cookie, cerr := req.Cookie(COOKIE_NAME); cerr == nil {
+		if cookie, cerr := req.Cookie(cookieName); cerr == nil {
 			if v := GetUserID(cookie.Value); v > 0 {
 				uid = v
 			}
