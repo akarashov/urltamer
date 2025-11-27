@@ -40,7 +40,7 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, use
 	}
 	// If the underlying repository supports creating users, ensure the user exists
 	type userCreator interface {
-		CreateUser(ctx context.Context, user_id int) (int64, error)
+		CreateUser(ctx context.Context, userID int) (int64, error)
 	}
 	if uc, ok := s.repo.(userCreator); ok {
 		// ignore error (user may already exist)
