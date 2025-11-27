@@ -82,9 +82,9 @@ func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer)
 	return result.RowsAffected()
 }
 
-func (p *PostgresRepository) CreateUser(ctx context.Context, user_id int) (int64, error) {
+func (p *PostgresRepository) CreateUser(ctx context.Context, userID int) (int64, error) {
 	result, err := p.db.ExecContext(ctx,
-		"INSERT INTO users (id) VALUES ($1)", user_id)
+		"INSERT INTO users (id) VALUES ($1)", userID)
 	if err != nil {
 		return 0, err
 	}
