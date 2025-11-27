@@ -52,7 +52,7 @@ func makeMigraton(pathMigrations string, dataBaseDSN string) error {
 }
 
 func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, error) {
-	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url FROM tamers ORDER BY uuid")
+	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id FROM tamers ORDER BY uuid")
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, erro
 	var tamers model.Tamers
 	for rows.Next() {
 		var tamer model.Tamer
-		err = rows.Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL)
+		err = rows.Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -74,8 +74,17 @@ func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, erro
 
 func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error) {
 	result, err := p.db.ExecContext(ctx,
-		"INSERT INTO tamers (short_url, original_url) VALUES ($1, $2) ON CONFLICT (original_url) DO UPDATE SET short_url = $1",
-		tamer.ShortURL, tamer.OriginalURL)
+		"INSERT INTO tamers (short_url, original_url, user_id) VALUES ($1, $2, $3) ON CONFLICT (original_url, user_id) DO UPDATE SET short_url = $1, user_id = $3",
+		tamer.ShortURL, tamer.OriginalURL, tamer.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+func (p *PostgresRepository) CreateUser(ctx context.Context, user_id int) (int64, error) {
+	result, err := p.db.ExecContext(ctx,
+		"INSERT INTO users (id) VALUES ($1)", user_id)
 	if err != nil {
 		return 0, err
 	}
@@ -85,9 +94,9 @@ func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer)
 func (p *PostgresRepository) GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error) {
 	var tamer model.Tamer
 	err := p.db.QueryRowContext(ctx,
-		"SELECT uuid, short_url, original_url FROM tamers WHERE short_url = $1",
+		"SELECT uuid, short_url, original_url, user_id FROM tamers WHERE short_url = $1",
 		shortURL,
-	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL)
+	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -100,9 +109,9 @@ func (p *PostgresRepository) GetTamerByShortURL(ctx context.Context, shortURL st
 func (p *PostgresRepository) GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error) {
 	var tamer model.Tamer
 	err := p.db.QueryRowContext(ctx,
-		"SELECT uuid, short_url, original_url FROM tamers WHERE original_url = $1",
+		"SELECT uuid, short_url, original_url, user_id FROM tamers WHERE original_url = $1",
 		originalURL,
-	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL)
+	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

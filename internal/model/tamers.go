@@ -4,6 +4,7 @@ type Tamer struct {
 	ID          string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserID      int    `json:"user_id"`
 }
 
 type Tamers []Tamer
@@ -22,3 +23,12 @@ type ResponseBatch struct {
 }
 
 type ResponseBatchs []ResponseBatch
+
+type UserURL struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
+type UserURLs []UserURL
+
+

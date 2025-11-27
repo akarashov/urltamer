@@ -66,13 +66,13 @@ func TestResponseEndpoint(t *testing.T) {
 			service := service.NewURLService(repo)
 			ctx := context.Background()
 			h := New(cfg, service, ctx)
-			h.Service.CreateShortURL(ctx, tt.want.location)
+			h.Service.CreateShortURL(ctx, tt.want.location, 1)
 			orig, _ := h.Service.GetAllURLs(h.Context)
 			if tt.name == "Valid_Tamer" {
 				tt.req = httptest.NewRequest(http.MethodGet, "/"+orig[0].ShortURL, nil)
 			}
 			if tt.name == "Valid_Tamer_with_query" {
-				tt.req = httptest.NewRequest(http.MethodGet, "/"+orig[0].ShortURL + "?iddqd=idkfa", nil)
+				tt.req = httptest.NewRequest(http.MethodGet, "/"+orig[0].ShortURL+"?iddqd=idkfa", nil)
 			}
 			h.ResponseEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
@@ -132,7 +132,7 @@ func TestRequestEndpoint(t *testing.T) {
 			service := service.NewURLService(repo)
 			ctx := context.Background()
 			h := New(cfg, service, ctx)
-			h.Service.CreateShortURL(ctx, "http://example.com")
+			h.Service.CreateShortURL(ctx, "http://example.com", 1)
 			h.RequestEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
 			assert.Contains(t, result.Body.String(), tt.want.body)
@@ -195,7 +195,7 @@ func TestRequestJSONEndpoint(t *testing.T) {
 			service := service.NewURLService(repo)
 			ctx := context.Background()
 			h := New(cfg, service, ctx)
-			h.Service.CreateShortURL(ctx, "http://example.com")
+			h.Service.CreateShortURL(ctx, "http://example.com", 1)
 			tt.req.Header.Set("Content-Type", "application/json")
 			h.RequestJSONEndpoint(tt.res, tt.req)
 			result := tt.res.(*httptest.ResponseRecorder)
