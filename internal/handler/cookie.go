@@ -16,7 +16,7 @@ type Claims struct {
 	UserID int
 }
 
-const COOKIE_NAME = "user_id"
+const COOKIE_NAME = "userId"
 const TOKEN_EXP = time.Hour * 3
 const SECRET_KEY = "supersecretkey"
 
