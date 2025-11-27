@@ -20,12 +20,12 @@ const cookieName = "userId"
 const tokenExp = time.Hour * 3
 const secretKey = "supersecretkey"
 
-func BuildJWTString(userId int, secretKey string, expTime time.Duration) (string, error) {
+func BuildJWTString(userID int, secretKey string, expTime time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expTime)),
 		},
-		UserID: userId,
+		UserID: userID,
 	})
 	JWT, err := token.SignedString([]byte(secretKey))
 	if err != nil {
@@ -73,9 +73,9 @@ func CookieMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
 		// llll := GetUserID(cookie.Value)
 		// log.Println("Cooooooookie: %s|| %s", err, llll)
 		if err != nil || GetUserID(cookie.Value) <= 0 {
-			userId := generateUserID()
+			userID := generateUserID()
 			// fmt.Printf("################# user_id =  %d\n", user_id)
-			cookieText, err := BuildJWTString(userId, secretKey, tokenExp)
+			cookieText, err := BuildJWTString(userID, secretKey, tokenExp)
 			if err == nil {
 				http.SetCookie(res, &http.Cookie{
 					Name:  cookieName,
