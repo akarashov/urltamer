@@ -7,6 +7,7 @@ import (
 
 type Repository interface {
 	LoadTamers(ctx context.Context) (model.Tamers, error)
+	GetUserURLs(ctx context.Context, userID int) (model.Tamers, error)
 	InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error)
 	GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error)
 	GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error)

@@ -121,6 +121,18 @@ func (j *JSONFileRepository) GetTamerByOriginalURL(ctx context.Context, original
 	return nil, nil
 }
 
+func (j *JSONFileRepository) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
+	j.mutex.RLock()
+	defer j.mutex.RUnlock()
+	var tamers model.Tamers
+	for _, tamer := range j.data {
+		if tamer.UserID == userID {
+			tamers = append(tamers, tamer)
+		}
+	}
+	return tamers, nil
+}
+
 func (j *JSONFileRepository) Ping(ctx context.Context) bool {
 	return false
 }

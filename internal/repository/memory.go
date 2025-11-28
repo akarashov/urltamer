@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
-	"sync"
 	"strconv"
+	"sync"
 
 	"github.com/akarashov/urltamer/internal/model"
-
 )
 
 type MemoryRepository struct {
@@ -71,6 +70,18 @@ func (m *MemoryRepository) GetTamerByOriginalURL(ctx context.Context, originalUR
 		return &tamer, nil
 	}
 	return nil, nil
+}
+
+func (m *MemoryRepository) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	var tamers model.Tamers
+	for _, tamer := range m.data {
+		if tamer.UserID == userID {
+			tamers = append(tamers, tamer)
+		}
+	}
+	return tamers, nil
 }
 
 func (m *MemoryRepository) Ping(ctx context.Context) bool {
