@@ -31,10 +31,8 @@ func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Re
 	var batchStatus int = http.StatusCreated
 	for _, requestBatch := range requestBatchs {
 		uid := generateUserID()
-		if cookie, cerr := req.Cookie(cookieName); cerr == nil {
-			if v := GetUserID(cookie.Value); v > 0 {
-				uid = v
-			}
+		if id, ok := UserIDFromRequest(req); ok {
+			uid = id
 		}
 		tamer, err := h.Service.CreateShortURL(h.Context, requestBatch.OriginalURL, uid)
 		status, ok := h.isConflictResolver(err)

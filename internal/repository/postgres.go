@@ -72,6 +72,28 @@ func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, erro
 	return tamers, nil
 }
 
+func (p *PostgresRepository) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
+	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id FROM tamers where user_id=$1 ORDER BY uuid", userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var tamers model.Tamers
+	for rows.Next() {
+		var tamer model.Tamer
+		err = rows.Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
+		if err != nil {
+			return nil, err
+		}
+		tamers = append(tamers, tamer)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return tamers, nil
+}
+
+
 func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error) {
 	result, err := p.db.ExecContext(ctx,
 		"INSERT INTO tamers (short_url, original_url, user_id) VALUES ($1, $2, $3) ON CONFLICT (original_url, user_id) DO UPDATE SET short_url = $1, user_id = $3",

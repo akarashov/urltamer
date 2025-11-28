@@ -82,6 +82,10 @@ func (s *URLService) GetAllURLs(ctx context.Context) (model.Tamers, error) {
 	return s.repo.LoadTamers(ctx)
 }
 
+func (s *URLService) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
+	return s.repo.GetUserURLs(ctx, userID)
+}
+
 func (s *URLService) Ping(ctx context.Context) bool {
 	return s.repo.Ping(ctx)
 }

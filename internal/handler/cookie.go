@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
@@ -19,6 +20,10 @@ type Claims struct {
 const cookieName = "userId"
 const tokenExp = time.Hour * 3
 const secretKey = "supersecretkey"
+
+type contextKey string
+
+const ctxUserID contextKey = "userID"
 
 func BuildJWTString(userID int, secretKey string, expTime time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
@@ -47,10 +52,8 @@ func GetUserID(tokenString string) int {
 		return -1
 	}
 	if !token.Valid {
-		// fmt.Println("Token is not valid")
 		return -1
 	}
-	// fmt.Println("Token os valid")
 	return claims.UserID
 }
 
@@ -69,12 +72,13 @@ func generateUserID() int {
 
 func CookieMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
+		// Выдавать пользователю симметрично подписанную куку,
+		// содержащую уникальный идентификатор пользователя,
+		// если такой куки не существует или она не проходит проверку подлинности.
+		var userID int
 		cookie, err := req.Cookie(cookieName)
-		// llll := GetUserID(cookie.Value)
-		// log.Println("Cooooooookie: %s|| %s", err, llll)
 		if err != nil || GetUserID(cookie.Value) <= 0 {
-			userID := generateUserID()
-			// fmt.Printf("################# user_id =  %d\n", user_id)
+			userID = generateUserID()
 			cookieText, err := BuildJWTString(userID, secretKey, tokenExp)
 			if err == nil {
 				http.SetCookie(res, &http.Cookie{
@@ -84,8 +88,30 @@ func CookieMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
 			} else {
 				log.Println("Error generating JWT token: ", err)
 			}
-
+		} else {
+			userID = GetUserID(cookie.Value)
 		}
-		wrapped(res, req)
+		ctx := context.WithValue(req.Context(), ctxUserID, userID)
+		wrapped(res, req.WithContext(ctx))
 	}
+}
+
+func UserIDFromRequest(req *http.Request) (int, bool) {
+	// Parse context first, if middleware was used
+	ctxValue := req.Context().Value(ctxUserID) 
+	if ctxValue != nil {
+		userID, ok := ctxValue.(int)
+		if ok && userID > 0 {
+			return userID, true
+		}
+	}
+	// Parse cookie directly if middleware not used
+	cookie, err := req.Cookie(cookieName)
+	if err == nil {
+		userID := GetUserID(cookie.Value)
+		if userID > 0 {
+			return userID, true
+		}
+	}
+	return 0, false
 }

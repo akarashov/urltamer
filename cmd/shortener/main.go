@@ -52,7 +52,7 @@ func main() {
 	mux.Post(`/api/shorten`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpoint), *log))
 	mux.Post(`/api/shorten/batch`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpointBatch), *log))
 
-	mux.Get(`/api/user/urls`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.UserURLsEndpoint), *log))
+	mux.Get(`/api/user/urls`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(handler.CookieMiddleware(h.UserURLsEndpoint)), *log))
 	mux.Get(`/ping`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.PingEndpoint), *log))
 	mux.Get(`/{tamer}`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(handler.CookieMiddleware(h.ResponseEndpoint)), *log))
 
