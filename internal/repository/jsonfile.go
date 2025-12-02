@@ -140,3 +140,31 @@ func (j *JSONFileRepository) Ping(ctx context.Context) bool {
 func (j *JSONFileRepository) Close() error {
 	return j.save()
 }
+
+func (j *JSONFileRepository) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
+	j.mutex.Lock()
+	defer j.mutex.Unlock()
+	set := make(map[string]struct{}, len(shortURLs))
+	for _, s := range shortURLs {
+		set[s] = struct{}{}
+	}
+	var affected int64
+	for id, tamer := range j.data {
+		if tamer.UserID != userID {
+			continue
+		}
+		if _, ok := set[tamer.ShortURL]; ok {
+			if !tamer.DeletedFlag {
+				tamer.DeletedFlag = true
+				j.data[id] = tamer
+				affected++
+			}
+		}
+	}
+	if affected > 0 {
+		if err := j.save(); err != nil {
+			return 0, err
+		}
+	}
+	return affected, nil
+}

@@ -11,6 +11,7 @@ type Repository interface {
 	InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error)
 	GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error)
 	GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error)
+	DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error)
 	Ping(ctx context.Context) bool 
 	Close() error
 }

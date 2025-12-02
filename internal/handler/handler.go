@@ -16,6 +16,7 @@ type (
 		Context context.Context
 		Base    *string
 		Tamers  model.Tamers
+		// tamerCh chan model.DeleteTamer
 	}
 )
 
@@ -30,5 +31,7 @@ func New(c *config.Config, s *service.URLService, ctx context.Context) *Handler 
 		Context: ctx,
 		Base:    &c.Base,
 		Tamers:  mc,
+		// tamerCh: make(chan model.DeleteTamer, 32),
 	}
+	// return handler
 }

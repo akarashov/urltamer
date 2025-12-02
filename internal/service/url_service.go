@@ -75,6 +75,9 @@ func (s *URLService) GetOriginalURL(ctx context.Context, shortURL string) (strin
 	if tamer == nil {
 		return "", ErrShortURLNotFound
 	}
+	if tamer.DeletedFlag {
+		return "#", nil
+	}
 	return tamer.OriginalURL, nil
 }
 
@@ -84,6 +87,17 @@ func (s *URLService) GetAllURLs(ctx context.Context) (model.Tamers, error) {
 
 func (s *URLService) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
 	return s.repo.GetUserURLs(ctx, userID)
+}
+
+func (s *URLService) DeleteTamer(ctx context.Context, userID int, shortURLs []string) error {
+	affected, err := s.repo.DeleteTamer(ctx, userID, shortURLs)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrShortURLNotFound
+	}
+	return nil
 }
 
 func (s *URLService) Ping(ctx context.Context) bool {

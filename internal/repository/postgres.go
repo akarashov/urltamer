@@ -52,7 +52,7 @@ func makeMigraton(pathMigrations string, dataBaseDSN string) error {
 }
 
 func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, error) {
-	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id FROM tamers ORDER BY uuid")
+	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id, is_deleted FROM tamers ORDER BY uuid")
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, erro
 	var tamers model.Tamers
 	for rows.Next() {
 		var tamer model.Tamer
-		err = rows.Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
+		err = rows.Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID, &tamer.DeletedFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +73,7 @@ func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, erro
 }
 
 func (p *PostgresRepository) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
-	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id FROM tamers where user_id=$1 ORDER BY uuid", userID)
+	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id, is_deleted FROM tamers where user_id=$1 ORDER BY uuid", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (p *PostgresRepository) GetUserURLs(ctx context.Context, userID int) (model
 	var tamers model.Tamers
 	for rows.Next() {
 		var tamer model.Tamer
-		err = rows.Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
+		err = rows.Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID, &tamer.DeletedFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -104,6 +104,15 @@ func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer)
 	return result.RowsAffected()
 }
 
+func (p *PostgresRepository) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
+	result, err := p.db.ExecContext(ctx,
+		"UPDATE tamers SET is_deleted = True WHERE user_id = $1 AND short_url = ANY($2::text[])", userID, shortURLs)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 func (p *PostgresRepository) CreateUser(ctx context.Context, userID int) (int64, error) {
 	result, err := p.db.ExecContext(ctx,
 		"INSERT INTO users (id) VALUES ($1)", userID)
@@ -116,9 +125,9 @@ func (p *PostgresRepository) CreateUser(ctx context.Context, userID int) (int64,
 func (p *PostgresRepository) GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error) {
 	var tamer model.Tamer
 	err := p.db.QueryRowContext(ctx,
-		"SELECT uuid, short_url, original_url, user_id FROM tamers WHERE short_url = $1",
+		"SELECT uuid, short_url, original_url, user_id, is_deleted FROM tamers WHERE short_url = $1",
 		shortURL,
-	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
+	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID, &tamer.DeletedFlag)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -131,9 +140,9 @@ func (p *PostgresRepository) GetTamerByShortURL(ctx context.Context, shortURL st
 func (p *PostgresRepository) GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error) {
 	var tamer model.Tamer
 	err := p.db.QueryRowContext(ctx,
-		"SELECT uuid, short_url, original_url, user_id FROM tamers WHERE original_url = $1",
+		"SELECT uuid, short_url, original_url, user_id, is_deleted FROM tamers WHERE original_url = $1",
 		originalURL,
-	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID)
+	).Scan(&tamer.ID, &tamer.ShortURL, &tamer.OriginalURL, &tamer.UserID, &tamer.DeletedFlag)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

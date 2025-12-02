@@ -91,3 +91,26 @@ func (m *MemoryRepository) Ping(ctx context.Context) bool {
 func (m *MemoryRepository) Close() error {
 	return nil
 }
+
+func (m *MemoryRepository) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	set := make(map[string]struct{}, len(shortURLs))
+	for _, s := range shortURLs {
+		set[s] = struct{}{}
+	}
+	var affected int64
+	for id, tamer := range m.data {
+		if tamer.UserID != userID {
+			continue
+		}
+		if _, ok := set[tamer.ShortURL]; ok {
+			if !tamer.DeletedFlag {
+				tamer.DeletedFlag = true
+				m.data[id] = tamer
+				affected++
+			}
+		}
+	}
+	return affected, nil
+}

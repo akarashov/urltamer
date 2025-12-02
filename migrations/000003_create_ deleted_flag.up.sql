@@ -1,0 +1,1 @@
+ALTER TABLE tamers ADD COLUMN is_deleted BOOL NOT NULL DEFAULT False;
