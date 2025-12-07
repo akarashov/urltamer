@@ -12,6 +12,7 @@ import (
 var ErrURLAlreadyExists = errors.New("URL already exists")
 var ErrShortURLConflict = errors.New("short URL conflict")
 var ErrShortURLNotFound = errors.New("short URL not found")
+var ErrURLDeleted       = errors.New("URL deleted")
 
 type URLService struct {
 	repo repository.Repository
@@ -76,7 +77,7 @@ func (s *URLService) GetOriginalURL(ctx context.Context, shortURL string) (strin
 		return "", ErrShortURLNotFound
 	}
 	if tamer.DeletedFlag {
-		return "#", nil
+		return "", ErrURLDeleted
 	}
 	return tamer.OriginalURL, nil
 }
@@ -89,15 +90,12 @@ func (s *URLService) GetUserURLs(ctx context.Context, userID int) (model.Tamers,
 	return s.repo.GetUserURLs(ctx, userID)
 }
 
-func (s *URLService) DeleteTamer(ctx context.Context, userID int, shortURLs []string) error {
+func (s *URLService) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
 	affected, err := s.repo.DeleteTamer(ctx, userID, shortURLs)
 	if err != nil {
-		return err
+		return -1, err
 	}
-	if affected == 0 {
-		return ErrShortURLNotFound
-	}
-	return nil
+	return affected, nil
 }
 
 func (s *URLService) Ping(ctx context.Context) bool {
