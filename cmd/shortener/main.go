@@ -55,6 +55,8 @@ func main() {
 	mux.Get(`/api/user/urls`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(handler.CookieMiddleware(h.UserURLsEndpoint)), *log))
 	mux.Get(`/ping`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.PingEndpoint), *log))
 	mux.Get(`/{tamer}`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(handler.CookieMiddleware(h.ResponseEndpoint)), *log))
+	
+	mux.Delete(`/api/user/urls`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(handler.CookieMiddleware(h.DeleteUserURLsEndpoint)), *log))
 
 	log.Infow("Starting server", "addr", cfg.Listen)
 

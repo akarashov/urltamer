@@ -1,0 +1,1 @@
+ALTER TABLE tamers DROP COLUMN IF EXISTS is_deleted;

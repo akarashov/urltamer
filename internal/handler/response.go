@@ -2,14 +2,19 @@ package handler
 
 import (
 	"net/http"
+
+	"github.com/akarashov/urltamer/internal/service"
 )
 
 func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
 	tamer := req.URL.Path[1:]
 	originalURL, err := h.Service.GetOriginalURL(h.Context, tamer)
-	if err != nil {
-		http.Error(res, "Not found", http.StatusBadRequest)
-	} else {
-		http.Redirect(res, req, originalURL, http.StatusTemporaryRedirect)
+	switch err {
+		case nil:
+			http.Redirect(res, req, originalURL, http.StatusTemporaryRedirect)
+		case service.ErrURLDeleted:
+			http.Error(res, "Deleted", http.StatusGone)
+		default:
+			http.Error(res, "Not found", http.StatusBadRequest)
 	}
 }
