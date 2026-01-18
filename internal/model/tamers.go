@@ -32,7 +32,13 @@ type UserURL struct {
 type UserURLs []UserURL
 
 type DeleteTamer struct {
-	UserID      int    `json:"user_id"`
-	ShortURL    string `json:"short_url"`
+	UserID   int    `json:"user_id"`
+	ShortURL string `json:"short_url"`
+}
 
+type AuditEvent struct {
+	TS     int    `json:"ts"`                // unix timestamp события
+	Action string `json:"action"`            // действие: shorten (создание) или follow (прохождение по ссылке)
+	UserID string `json:"user_id,omitempty"` // идентификатор пользователя, если есть
+	URL    string `json:"url,omitempty"`     // оригинальный (не сокращенный) URL
 }
