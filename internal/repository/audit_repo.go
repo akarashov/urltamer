@@ -3,7 +3,6 @@ package repository
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -55,14 +54,17 @@ func NewAuditURLObserver(url string) *AuditURLObserver {
 }
 
 func (a *AuditURLObserver) Update(event model.AuditEvent) {
-
 	data, err := json.MarshalIndent(event, "", "  ")
 	if err != nil {
-		log.Printf("Audit file marshalling error: %v", err)
+		log.Printf("Audit URL marshalling error: %v", err)
 		return
 	}
-	body := io.Reader(bytes.NewBuffer(data))
-	http.Post(a.URL, "Content-Type: application/json", body)
+	resp, err := http.Post(a.URL, "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		log.Printf("Audit URL POST error: %v", err)
+		return
+	}
+	defer resp.Body.Close()
 }
 
 func (a *AuditURLObserver) GetID() string {
