@@ -12,6 +12,8 @@ type Config struct {
 	Base   string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DataBaseDSN string `env:"DATABASE_DSN"`
+	AuditFile string `env:"AUDIT_FILE"`
+	AuditURL string `env:"AUDIT_URL"`
 }
 
 func New() *Config {
@@ -22,6 +24,8 @@ func New() *Config {
 	// flag.StringVar(&c.DataBaseDSN, "d", "postgres://admin:admin@192.168.0.20:5432/demo?sslmode=disable", "Data Base DSN")
 	flag.StringVar(&c.FileStoragePath, "f", "", "File storage path")
 	flag.StringVar(&c.DataBaseDSN, "d", "", "Data Base DSN")
+	flag.StringVar(&c.AuditFile, "audit-file", "", "Audit log file path")
+	flag.StringVar(&c.AuditURL, "audit-url", "", "Audit log ULR")
 	return c
 }
 
