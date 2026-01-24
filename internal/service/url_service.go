@@ -12,7 +12,7 @@ import (
 var ErrURLAlreadyExists = errors.New("URL already exists")
 var ErrShortURLConflict = errors.New("short URL conflict")
 var ErrShortURLNotFound = errors.New("short URL not found")
-var ErrURLDeleted       = errors.New("URL deleted")
+var ErrURLDeleted = errors.New("URL deleted")
 
 type URLService struct {
 	repo repository.Repository

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+
 	"github.com/akarashov/urltamer/internal/model"
 )
 
@@ -12,6 +13,6 @@ type Repository interface {
 	GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error)
 	GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error)
 	DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error)
-	Ping(ctx context.Context) bool 
+	Ping(ctx context.Context) bool
 	Close() error
 }

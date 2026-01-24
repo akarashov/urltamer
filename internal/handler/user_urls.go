@@ -19,8 +19,8 @@ func (h *Handler) UserURLsEndpoint(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-// Если кука присутствует в запросе, но не содержит ID пользователя, хендлер должен возвращать HTTP-статус 401 Unauthorized.
-// При отсутствии сокращённых пользователем URL хендлер должен отдавать HTTP-статус 204 No Content.
+	// Если кука присутствует в запросе, но не содержит ID пользователя, хендлер должен возвращать HTTP-статус 401 Unauthorized.
+	// При отсутствии сокращённых пользователем URL хендлер должен отдавать HTTP-статус 204 No Content.
 	tamers, err := h.Service.GetUserURLs(h.Context, userID)
 	if err != nil {
 		http.Error(res, "Not found", http.StatusBadRequest)

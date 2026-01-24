@@ -30,18 +30,18 @@ func (h *Handler) DeleteUserURLsEndpoint(res http.ResponseWriter, req *http.Requ
 		id, ok := UserIDFromRequest(req)
 		if ok {
 			uid := id
-		affected, err := h.Service.DeleteTamer(h.Context, uid, shortURLs)
-		if err == nil && affected >0 {
-			res.Header().Set("Content-Type", "application/json")
-			res.WriteHeader(http.StatusAccepted)
-			return
-		} else if err == nil && affected == 0 {
-			http.Error(res, "Not found", http.StatusNotFound)
-			return
-		} else {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
-			return
-		}
+			affected, err := h.Service.DeleteTamer(h.Context, uid, shortURLs)
+			if err == nil && affected > 0 {
+				res.Header().Set("Content-Type", "application/json")
+				res.WriteHeader(http.StatusAccepted)
+				return
+			} else if err == nil && affected == 0 {
+				http.Error(res, "Not found", http.StatusNotFound)
+				return
+			} else {
+				http.Error(res, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 }

@@ -31,7 +31,7 @@ func NewPostgresRepository(dataBaseDSN string) (*PostgresRepository, error) {
 		return nil, err
 	}
 
-	err = makeMigraton("file://migrations", dataBaseDSN)// migrate
+	err = makeMigraton("file://migrations", dataBaseDSN) // migrate
 	if err != nil {
 		return &PostgresRepository{db: db}, err
 	}
@@ -92,7 +92,6 @@ func (p *PostgresRepository) GetUserURLs(ctx context.Context, userID int) (model
 	}
 	return tamers, nil
 }
-
 
 func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error) {
 	result, err := p.db.ExecContext(ctx,

@@ -98,7 +98,7 @@ func CookieMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
 
 func UserIDFromRequest(req *http.Request) (int, bool) {
 	// Parse context first, if middleware was used
-	ctxValue := req.Context().Value(ctxUserID) 
+	ctxValue := req.Context().Value(ctxUserID)
 	if ctxValue != nil {
 		userID, ok := ctxValue.(int)
 		if ok && userID > 0 {
