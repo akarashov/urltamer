@@ -11,6 +11,7 @@ import (
 	"github.com/akarashov/urltamer/internal/service"
 )
 
+// AuditMiddleware is a middleware that logs audit events for HTTP requests.
 func AuditMiddleware(wrapped http.HandlerFunc, subject service.Subject) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		uid := ""

@@ -1,3 +1,4 @@
+// Package config provides configuration management for the URL shortener service.
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Config holds the configuration settings for the URL shortener service.
 type Config struct {
 	Listen          string `env:"SERVER_ADDRESS"`
 	Base            string `env:"BASE_URL"`
@@ -17,6 +19,7 @@ type Config struct {
 	AuditURL        string `env:"AUDIT_URL"`
 }
 
+// New initializes a Config struct with command-line flags.
 func New() *Config {
 	c := &Config{}
 	flag.StringVar(&c.Listen, "a", ":8080", "Listen on")
@@ -28,6 +31,7 @@ func New() *Config {
 	return c
 }
 
+// NewEnv parses environment variables to populate a Config struct.
 func NewEnv() *Config {
 	c := &Config{}
 	err := env.Parse(c)
@@ -37,6 +41,7 @@ func NewEnv() *Config {
 	return c
 }
 
+// NewLogger creates and returns a SugaredLogger for logging.
 func NewLogger() *zap.SugaredLogger {
 	logger, err := zap.NewDevelopment()
 	if err != nil {

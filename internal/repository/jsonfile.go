@@ -10,6 +10,7 @@ import (
 	"github.com/akarashov/urltamer/internal/model"
 )
 
+// JSONFileRepository is a repository that stores URL mappings in a JSON file.
 type JSONFileRepository struct {
 	mutex    sync.RWMutex
 	filename string
@@ -18,6 +19,7 @@ type JSONFileRepository struct {
 	ID       int
 }
 
+// NewJSONFileRepository creates a new JSONFileRepository.
 func NewJSONFileRepository(filename string) (*JSONFileRepository, error) {
 	repo := &JSONFileRepository{
 		filename: filename,
@@ -32,44 +34,7 @@ func NewJSONFileRepository(filename string) (*JSONFileRepository, error) {
 	return repo, nil
 }
 
-func (j *JSONFileRepository) open() error {
-	j.mutex.Lock()
-	defer j.mutex.Unlock()
-	file, err := os.ReadFile(j.filename)
-	if err != nil {
-		return nil
-	} else {
-		tamers := model.Tamers{}
-		err = json.Unmarshal(file, &tamers)
-		if err != nil {
-			return err
-		}
-		for _, t := range tamers {
-			id, err := strconv.Atoi(t.ID)
-			if err != nil {
-				return err
-			}
-			j.data[id] = t
-			j.URL[t.OriginalURL] = id
-			j.ID = id + 1
-		}
-		return nil
-	}
-}
-
-func (j *JSONFileRepository) save() error {
-
-	tamers, err := j.LoadTamers(context.TODO())
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(tamers, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(j.filename, data, 0666)
-}
-
+// LoadTamers loads all URL mappings from the repository.
 func (j *JSONFileRepository) LoadTamers(ctx context.Context) (model.Tamers, error) {
 	tamers := make(model.Tamers, 0, len(j.data))
 	for _, tamer := range j.data {
@@ -78,6 +43,7 @@ func (j *JSONFileRepository) LoadTamers(ctx context.Context) (model.Tamers, erro
 	return tamers, nil
 }
 
+// InsertTamer inserts a new URL mapping into the repository.
 func (j *JSONFileRepository) InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error) {
 	j.mutex.Lock()
 	defer j.mutex.Unlock()
@@ -99,6 +65,7 @@ func (j *JSONFileRepository) InsertTamer(ctx context.Context, tamer model.Tamer)
 	return 1, nil
 }
 
+// GetTamerByShortURL retrieves a URL mapping by its short URL.
 func (j *JSONFileRepository) GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error) {
 	j.mutex.RLock()
 	defer j.mutex.RUnlock()
@@ -110,6 +77,7 @@ func (j *JSONFileRepository) GetTamerByShortURL(ctx context.Context, shortURL st
 	return nil, nil
 }
 
+// GetTamerByOriginalURL retrieves a URL mapping by its original URL.
 func (j *JSONFileRepository) GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error) {
 	j.mutex.RLock()
 	defer j.mutex.RUnlock()
@@ -121,6 +89,7 @@ func (j *JSONFileRepository) GetTamerByOriginalURL(ctx context.Context, original
 	return nil, nil
 }
 
+// GetUserURLs retrieves all URL mappings for a specific user.
 func (j *JSONFileRepository) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
 	j.mutex.RLock()
 	defer j.mutex.RUnlock()
@@ -133,14 +102,17 @@ func (j *JSONFileRepository) GetUserURLs(ctx context.Context, userID int) (model
 	return tamers, nil
 }
 
+// Ping checks the connectivity of the repository.
 func (j *JSONFileRepository) Ping(ctx context.Context) bool {
 	return false
 }
 
+// Close saves the data and closes the repository.
 func (j *JSONFileRepository) Close() error {
 	return j.save()
 }
 
+// DeleteTamer marks URL mappings as deleted for a specific user.
 func (j *JSONFileRepository) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
 	j.mutex.Lock()
 	defer j.mutex.Unlock()
@@ -167,4 +139,44 @@ func (j *JSONFileRepository) DeleteTamer(ctx context.Context, userID int, shortU
 		}
 	}
 	return affected, nil
+}
+
+// open loads the data from the JSON file into memory.
+func (j *JSONFileRepository) open() error {
+	j.mutex.Lock()
+	defer j.mutex.Unlock()
+	file, err := os.ReadFile(j.filename)
+	if err != nil {
+		return nil
+	} else {
+		tamers := model.Tamers{}
+		err = json.Unmarshal(file, &tamers)
+		if err != nil {
+			return err
+		}
+		for _, t := range tamers {
+			id, err := strconv.Atoi(t.ID)
+			if err != nil {
+				return err
+			}
+			j.data[id] = t
+			j.URL[t.OriginalURL] = id
+			j.ID = id + 1
+		}
+		return nil
+	}
+}
+
+// save writes the in-memory data to the JSON file.
+func (j *JSONFileRepository) save() error {
+
+	tamers, err := j.LoadTamers(context.TODO())
+	if err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(tamers, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(j.filename, data, 0666)
 }

@@ -1,3 +1,4 @@
+// URL Shortener Service (tamer)
 package main
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// pprofAddr is the address for the pprof server.
 const (
 	pprofAddr = ":9090"
 )

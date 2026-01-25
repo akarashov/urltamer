@@ -1,3 +1,4 @@
+// Package hadler of the application URL Tamer serve http requests.
 package handler
 
 import (
@@ -11,15 +12,16 @@ import (
 )
 
 type (
+	// Handler is a structure that handles HTTP requests for URL shortening service.
 	Handler struct {
 		Service *service.URLService
 		Context context.Context
 		Base    *string
 		Tamers  model.Tamers
-		// tamerCh chan model.DeleteTamer
 	}
 )
 
+// New creates a new Handler instance.
 func New(c *config.Config, s *service.URLService, ctx context.Context) *Handler {
 	c.Base = strings.TrimRight(c.Base, "/")
 	mc, err := s.GetAllURLs(ctx)
@@ -31,7 +33,5 @@ func New(c *config.Config, s *service.URLService, ctx context.Context) *Handler 
 		Context: ctx,
 		Base:    &c.Base,
 		Tamers:  mc,
-		// tamerCh: make(chan model.DeleteTamer, 32),
 	}
-	// return handler
 }

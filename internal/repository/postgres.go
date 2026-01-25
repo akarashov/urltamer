@@ -1,4 +1,3 @@
-// internal/repository/postgres.go
 package repository
 
 import (
@@ -13,10 +12,12 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// PostgresRepository is a repository that stores URL mappings in a PostgreSQL database.
 type PostgresRepository struct {
 	db *sql.DB
 }
 
+// NewPostgresRepository creates a new PostgresRepository.
 func NewPostgresRepository(dataBaseDSN string) (*PostgresRepository, error) {
 	db, err := sql.Open("pgx", dataBaseDSN)
 	if err != nil {
@@ -39,18 +40,7 @@ func NewPostgresRepository(dataBaseDSN string) (*PostgresRepository, error) {
 	return &PostgresRepository{db: db}, nil
 }
 
-func makeMigraton(pathMigrations string, dataBaseDSN string) error {
-	m, err := migrate.New(pathMigrations, dataBaseDSN)
-	if err != nil {
-		return err
-	}
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		return err
-	}
-	return nil
-}
-
+// LoadTamers loads all URL mappings from the repository.
 func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, error) {
 	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id, is_deleted FROM tamers ORDER BY uuid")
 	if err != nil {
@@ -72,6 +62,7 @@ func (p *PostgresRepository) LoadTamers(ctx context.Context) (model.Tamers, erro
 	return tamers, nil
 }
 
+// GetUserURLs retrieves all URL mappings for a specific user.
 func (p *PostgresRepository) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
 	rows, err := p.db.QueryContext(ctx, "SELECT uuid, short_url, original_url, user_id, is_deleted FROM tamers where user_id=$1 ORDER BY uuid", userID)
 	if err != nil {
@@ -93,6 +84,7 @@ func (p *PostgresRepository) GetUserURLs(ctx context.Context, userID int) (model
 	return tamers, nil
 }
 
+// InsertTamer inserts a new URL mapping into the repository.
 func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error) {
 	result, err := p.db.ExecContext(ctx,
 		"INSERT INTO tamers (short_url, original_url, user_id) VALUES ($1, $2, $3) ON CONFLICT (original_url, user_id) DO UPDATE SET short_url = $1, user_id = $3",
@@ -103,6 +95,7 @@ func (p *PostgresRepository) InsertTamer(ctx context.Context, tamer model.Tamer)
 	return result.RowsAffected()
 }
 
+// DeleteTamer marks URL mappings as deleted for a specific user.
 func (p *PostgresRepository) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
 	result, err := p.db.ExecContext(ctx,
 		"UPDATE tamers SET is_deleted = True WHERE user_id = $1 AND short_url = ANY($2::text[])", userID, shortURLs)
@@ -112,6 +105,7 @@ func (p *PostgresRepository) DeleteTamer(ctx context.Context, userID int, shortU
 	return result.RowsAffected()
 }
 
+// CreateUser creates a new user in the repository.
 func (p *PostgresRepository) CreateUser(ctx context.Context, userID int) (int64, error) {
 	result, err := p.db.ExecContext(ctx,
 		"INSERT INTO users (id) VALUES ($1)", userID)
@@ -121,6 +115,7 @@ func (p *PostgresRepository) CreateUser(ctx context.Context, userID int) (int64,
 	return result.RowsAffected()
 }
 
+// GetTamerByShortURL retrieves a URL mapping by its short URL.
 func (p *PostgresRepository) GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error) {
 	var tamer model.Tamer
 	err := p.db.QueryRowContext(ctx,
@@ -136,6 +131,7 @@ func (p *PostgresRepository) GetTamerByShortURL(ctx context.Context, shortURL st
 	return &tamer, nil
 }
 
+// GetTamerByOriginalURL retrieves a URL mapping by its original URL.
 func (p *PostgresRepository) GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error) {
 	var tamer model.Tamer
 	err := p.db.QueryRowContext(ctx,
@@ -151,11 +147,26 @@ func (p *PostgresRepository) GetTamerByOriginalURL(ctx context.Context, original
 	return &tamer, nil
 }
 
+// Ping checks the connectivity of the repository.
 func (p *PostgresRepository) Ping(ctx context.Context) bool {
 	err := p.db.PingContext(ctx)
 	return err == nil
 }
 
+// Close closes the repository.
 func (p *PostgresRepository) Close() error {
 	return p.db.Close()
+}
+
+// makeMigraton applies database migrations.
+func makeMigraton(pathMigrations string, dataBaseDSN string) error {
+	m, err := migrate.New(pathMigrations, dataBaseDSN)
+	if err != nil {
+		return err
+	}
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }

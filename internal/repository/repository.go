@@ -1,3 +1,4 @@
+// Package repository defines the interface for URL storage repositories.
 package repository
 
 import (
@@ -6,6 +7,7 @@ import (
 	"github.com/akarashov/urltamer/internal/model"
 )
 
+// Repository defines the methods for interacting with the URL storage.
 type Repository interface {
 	LoadTamers(ctx context.Context) (model.Tamers, error)
 	GetUserURLs(ctx context.Context, userID int) (model.Tamers, error)

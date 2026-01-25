@@ -8,6 +8,7 @@ import (
 	"github.com/akarashov/urltamer/internal/model"
 )
 
+// MemoryRepository is an in-memory implementation of the Repository interface.
 type MemoryRepository struct {
 	mutex sync.RWMutex
 	data  map[int]model.Tamer
@@ -15,6 +16,7 @@ type MemoryRepository struct {
 	ID    int
 }
 
+// NewMemoryRepository creates a new MemoryRepository.
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
 		data: make(map[int]model.Tamer),
@@ -23,6 +25,7 @@ func NewMemoryRepository() *MemoryRepository {
 	}
 }
 
+// LoadTamers loads all URL mappings from the repository.
 func (m *MemoryRepository) LoadTamers(ctx context.Context) (model.Tamers, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -33,6 +36,7 @@ func (m *MemoryRepository) LoadTamers(ctx context.Context) (model.Tamers, error)
 	return tamers, nil
 }
 
+// InsertTamer inserts a new URL mapping into the repository.
 func (m *MemoryRepository) InsertTamer(ctx context.Context, tamer model.Tamer) (int64, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -50,6 +54,7 @@ func (m *MemoryRepository) InsertTamer(ctx context.Context, tamer model.Tamer) (
 	return 1, nil
 }
 
+// GetTamerByShortURL retrieves a URL mapping by its short URL.
 func (m *MemoryRepository) GetTamerByShortURL(ctx context.Context, shortURL string) (*model.Tamer, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -61,6 +66,7 @@ func (m *MemoryRepository) GetTamerByShortURL(ctx context.Context, shortURL stri
 	return nil, nil
 }
 
+// GetTamerByOriginalURL retrieves a URL mapping by its original URL.
 func (m *MemoryRepository) GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -72,6 +78,7 @@ func (m *MemoryRepository) GetTamerByOriginalURL(ctx context.Context, originalUR
 	return nil, nil
 }
 
+// GetUserURLs retrieves all URL mappings for a specific user.
 func (m *MemoryRepository) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -84,14 +91,17 @@ func (m *MemoryRepository) GetUserURLs(ctx context.Context, userID int) (model.T
 	return tamers, nil
 }
 
+// Ping checks the health of the repository.
 func (m *MemoryRepository) Ping(ctx context.Context) bool {
 	return false
 }
 
+// Close closes the repository.
 func (m *MemoryRepository) Close() error {
 	return nil
 }
 
+// DeleteTamer marks URL mappings as deleted for a specific user.
 func (m *MemoryRepository) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()

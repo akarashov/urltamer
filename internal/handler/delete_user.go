@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// DeleteUserURLsEndpoint handles the deletion of user URLs.
 func (h *Handler) DeleteUserURLsEndpoint(res http.ResponseWriter, req *http.Request) {
 	var shortURLs []string
 	var buf bytes.Buffer

@@ -6,6 +6,7 @@ import (
 	"github.com/akarashov/urltamer/internal/service"
 )
 
+// ResponseEndpoint handles redirection from a shortened URL to the original URL.
 func (h *Handler) ResponseEndpoint(res http.ResponseWriter, req *http.Request) {
 	tamer := req.URL.Path[1:]
 	originalURL, err := h.Service.GetOriginalURL(h.Context, tamer)
