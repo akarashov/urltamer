@@ -27,9 +27,7 @@ func makeHandler() (*Handler, func()) {
 	repo := repository.NewMemoryRepository()
 	svc := service.NewURLService(repo)
 	cleanup := func() {
-		if err := repo.Close(); err != nil {
-			// can't call b.Fatalf here; callers should handle failures if needed
-		}
+		_ = repo.Close()
 	}
 	return &Handler{Service: svc, Context: context.Background(), Base: &base}, cleanup
 }
