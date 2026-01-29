@@ -10,6 +10,11 @@ import (
 
 func BenchmarkCreateShortURL(b *testing.B) {
 	repo := repository.NewMemoryRepository()
+	defer func() {
+		if err := repo.Close(); err != nil {
+			b.Fatalf("repo close error: %v", err)
+		}
+	}()
 	svc := NewURLService(repo)
 	ctx := context.Background()
 
@@ -25,6 +30,11 @@ func BenchmarkCreateShortURL(b *testing.B) {
 
 func BenchmarkGetOriginalURL(b *testing.B) {
 	repo := repository.NewMemoryRepository()
+	defer func() {
+		if err := repo.Close(); err != nil {
+			b.Fatalf("repo close error: %v", err)
+		}
+	}()
 	svc := NewURLService(repo)
 	ctx := context.Background()
 

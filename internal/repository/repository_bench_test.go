@@ -10,6 +10,11 @@ import (
 
 func BenchmarkMemory_InsertTamer(b *testing.B) {
 	repo := NewMemoryRepository()
+	defer func() {
+		if err := repo.Close(); err != nil {
+			b.Fatalf("repo close error: %v", err)
+		}
+	}()
 	ctx := context.Background()
 
 	b.ResetTimer()
@@ -28,6 +33,11 @@ func BenchmarkMemory_InsertTamer(b *testing.B) {
 
 func BenchmarkMemory_GetTamerByShortURL(b *testing.B) {
 	repo := NewMemoryRepository()
+	defer func() {
+		if err := repo.Close(); err != nil {
+			b.Fatalf("repo close error: %v", err)
+		}
+	}()
 	ctx := context.Background()
 
 	const cnt = 10000
@@ -57,6 +67,11 @@ func BenchmarkMemory_GetTamerByShortURL(b *testing.B) {
 
 func BenchmarkMemory_GetTamerByOriginalURL(b *testing.B) {
 	repo := NewMemoryRepository()
+	defer func() {
+		if err := repo.Close(); err != nil {
+			b.Fatalf("repo close error: %v", err)
+		}
+	}()
 	ctx := context.Background()
 
 	const cnt = 10000
@@ -86,6 +101,11 @@ func BenchmarkMemory_GetTamerByOriginalURL(b *testing.B) {
 
 func BenchmarkMemory_DeleteTamer(b *testing.B) {
 	repo := NewMemoryRepository()
+	defer func() {
+		if err := repo.Close(); err != nil {
+			b.Fatalf("repo close error: %v", err)
+		}
+	}()
 	ctx := context.Background()
 
 	const cnt = 10000

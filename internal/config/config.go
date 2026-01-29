@@ -9,6 +9,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// pprofAddr is the address for the pprof server.
+const (
+	PprofAddr = ":9090"
+)
+
 // Config holds the configuration settings for the URL shortener service.
 type Config struct {
 	Listen          string `env:"SERVER_ADDRESS"`

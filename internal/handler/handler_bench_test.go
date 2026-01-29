@@ -22,15 +22,21 @@ func (m *mockSubject) Register(o service.Observer)   {}
 func (m *mockSubject) Deregister(o service.Observer) {}
 func (m *mockSubject) Notify(e model.AuditEvent)     {}
 
-func makeHandler() *Handler {
+func makeHandler() (*Handler, func()) {
 	base := "http://base"
 	repo := repository.NewMemoryRepository()
 	svc := service.NewURLService(repo)
-	return &Handler{Service: svc, Context: context.Background(), Base: &base}
+	cleanup := func() {
+		if err := repo.Close(); err != nil {
+			// can't call b.Fatalf here; callers should handle failures if needed
+		}
+	}
+	return &Handler{Service: svc, Context: context.Background(), Base: &base}, cleanup
 }
 
 func BenchmarkPingEndpoint(b *testing.B) {
-	h := makeHandler()
+	h, cleanup := makeHandler()
+	defer cleanup()
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/ping", nil)
@@ -39,14 +45,16 @@ func BenchmarkPingEndpoint(b *testing.B) {
 }
 
 func BenchmarkIsConflictResolver(b *testing.B) {
-	h := makeHandler()
+	h, cleanup := makeHandler()
+	defer cleanup()
 	for i := 0; i < b.N; i++ {
 		h.isConflictResolver(nil)
 	}
 }
 
 func BenchmarkRequestEndpoint(b *testing.B) {
-	h := makeHandler()
+	h, cleanup := makeHandler()
+	defer cleanup()
 	body := bytes.NewBufferString("https://example")
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
@@ -56,7 +64,8 @@ func BenchmarkRequestEndpoint(b *testing.B) {
 }
 
 func BenchmarkResponseEndpoint(b *testing.B) {
-	h := makeHandler()
+	h, cleanup := makeHandler()
+	defer cleanup()
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/s", nil)
@@ -66,9 +75,13 @@ func BenchmarkResponseEndpoint(b *testing.B) {
 }
 
 func BenchmarkRequestJSONEndpoint(b *testing.B) {
-	h := makeHandler()
+	h, cleanup := makeHandler()
+	defer cleanup()
 	payload := map[string]string{"url": "https://json"}
-	data, _ := json.Marshal(payload)
+	data, err := json.Marshal(payload)
+	if err != nil {
+		b.Fatalf("json marshal error: %v", err)
+	}
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/json", io.NopCloser(bytes.NewReader(data)))
@@ -78,9 +91,13 @@ func BenchmarkRequestJSONEndpoint(b *testing.B) {
 }
 
 func BenchmarkRequestJSONEndpointBatch(b *testing.B) {
-	h := makeHandler()
+	h, cleanup := makeHandler()
+	defer cleanup()
 	batch := []model.RequestBatch{{CorrelationID: "1", OriginalURL: "https://a"}}
-	data, _ := json.Marshal(batch)
+	data, err := json.Marshal(batch)
+	if err != nil {
+		b.Fatalf("json marshal error: %v", err)
+	}
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/jsonb", io.NopCloser(bytes.NewReader(data)))
@@ -90,11 +107,18 @@ func BenchmarkRequestJSONEndpointBatch(b *testing.B) {
 }
 
 func BenchmarkDeleteUserURLsEndpoint(b *testing.B) {
-	h := makeHandler()
+	h, cleanup := makeHandler()
+	defer cleanup()
 	shortURLs := []string{"s1"}
-	data, _ := json.Marshal(shortURLs)
+	data, err := json.Marshal(shortURLs)
+	if err != nil {
+		b.Fatalf("json marshal error: %v", err)
+	}
 	// create token cookie
-	token, _ := BuildJWTString(1, secretKey, time.Hour)
+	token, err := BuildJWTString(1, secretKey, time.Hour)
+	if err != nil {
+		b.Fatalf("BuildJWTString error: %v", err)
+	}
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/del", io.NopCloser(bytes.NewReader(data)))
@@ -105,8 +129,12 @@ func BenchmarkDeleteUserURLsEndpoint(b *testing.B) {
 }
 
 func BenchmarkUserURLsEndpoint(b *testing.B) {
-	h := makeHandler()
-	token, _ := BuildJWTString(1, secretKey, time.Hour)
+	h, cleanup := makeHandler()
+	defer cleanup()
+	token, err := BuildJWTString(1, secretKey, time.Hour)
+	if err != nil {
+		b.Fatalf("BuildJWTString error: %v", err)
+	}
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/user", nil)
@@ -135,7 +163,10 @@ func BenchmarkUserIDFromRequest_Context(b *testing.B) {
 }
 
 func BenchmarkUserIDFromRequest_Cookie(b *testing.B) {
-	token, _ := BuildJWTString(2, secretKey, time.Hour)
+	token, err := BuildJWTString(2, secretKey, time.Hour)
+	if err != nil {
+		b.Fatalf("BuildJWTString error: %v", err)
+	}
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Cookie", cookieName+"="+token)
 	for i := 0; i < b.N; i++ {
@@ -153,7 +184,10 @@ func BenchmarkBuildJWTString(b *testing.B) {
 }
 
 func BenchmarkGetUserID(b *testing.B) {
-	token, _ := BuildJWTString(3, secretKey, time.Minute)
+	token, err := BuildJWTString(3, secretKey, time.Minute)
+	if err != nil {
+		b.Fatalf("BuildJWTString error: %v", err)
+	}
 	for i := 0; i < b.N; i++ {
 		GetUserID(token)
 	}

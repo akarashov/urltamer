@@ -6,17 +6,16 @@ import (
 	"flag"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/akarashov/urltamer/internal/handler"
 	"github.com/akarashov/urltamer/internal/repository"
 	"github.com/akarashov/urltamer/internal/service"
 	"github.com/go-chi/chi/v5"
-)
-
-// pprofAddr is the address for the pprof server.
-const (
-	pprofAddr = ":9090"
 )
 
 func main() {
@@ -71,18 +70,9 @@ func main() {
 	h := handler.New(cfg, service, ctx)
 	mux := chi.NewRouter()
 
-	// Adapt existing handler-style middleware (func(http.HandlerFunc) http.HandlerFunc)
-	adapt := func(mw func(http.HandlerFunc) http.HandlerFunc) func(http.Handler) http.Handler {
-		return func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				mw(http.HandlerFunc(next.ServeHTTP))(w, r)
-			})
-		}
-	}
-
 	// middleware that need extra params
-	gzipMw := adapt(handler.GzipMiddleware)
-	cookieMw := adapt(handler.CookieMiddleware)
+	gzipMw := handler.Adapt(handler.GzipMiddleware)
+	cookieMw := handler.Adapt(handler.CookieMiddleware)
 	logReqMw := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			handler.LoggingMiddlewareRequest(http.HandlerFunc(next.ServeHTTP), *log)(w, r)
@@ -111,17 +101,37 @@ func main() {
 
 	mux.Delete(`/api/user/urls`, h.DeleteUserURLsEndpoint)
 
+	// start pprof server with graceful shutdown support
+	pprofSrv := &http.Server{Addr: config.PprofAddr, Handler: nil}
 	go func() {
-		log.Infow("Starting pprof", "addr", pprofAddr)
-		perr := http.ListenAndServe(pprofAddr, nil)
-		if perr != nil {
+		log.Infow("Starting pprof", "addr", config.PprofAddr)
+		if perr := pprofSrv.ListenAndServe(); perr != nil && perr != http.ErrServerClosed {
 			log.Warn(perr)
 		}
 	}()
 
-	log.Infow("Starting server", "addr", cfg.Listen)
-	err = http.ListenAndServe(cfg.Listen, mux)
-	if err != nil {
-		log.Fatal(err)
+	// start main server with graceful shutdown support
+	srv := &http.Server{Addr: cfg.Listen, Handler: mux}
+	go func() {
+		log.Infow("Starting server", "addr", cfg.Listen)
+		if serr := srv.ListenAndServe(); serr != nil && serr != http.ErrServerClosed {
+			log.Error(serr)
+		}
+	}()
+
+	// wait for interrupt signal to gracefully shutdown servers
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Infow("Shutting down servers")
+	ctxShut, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err = srv.Shutdown(ctxShut); err != nil {
+		log.Warnw("Error shutting down main server", "err", err)
+	}
+	if err = pprofSrv.Shutdown(ctxShut); err != nil {
+		log.Warnw("Error shutting down pprof server", "err", err)
 	}
 }
