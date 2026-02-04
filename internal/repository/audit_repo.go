@@ -10,16 +10,18 @@ import (
 	"github.com/akarashov/urltamer/internal/model"
 )
 
-// реализация наблюдателя для записи в файл
+// AuditFileObserver creates an observer that logs audit events to a file.
 type AuditFileObserver struct {
 	ID   string
 	File string
 }
 
+// NewAuditFileObserver creates a new AuditFileObserver.
 func NewAuditFileObserver(file string) *AuditFileObserver {
 	return &AuditFileObserver{ID: "audit_file", File: file}
 }
 
+// Update writes the audit event to the specified file.
 func (a *AuditFileObserver) Update(event model.AuditEvent) {
 	data, err := json.MarshalIndent(event, "", "  ")
 	if err != nil {
@@ -39,20 +41,23 @@ func (a *AuditFileObserver) Update(event model.AuditEvent) {
 	}
 }
 
+// GetID returns the ID of the observer.
 func (a *AuditFileObserver) GetID() string {
 	return a.ID
 }
 
-// реализация наблюдателя для записи в URL
+// AuditURLObserver creates an observer that sends audit events to a specified URL.
 type AuditURLObserver struct {
 	ID  string
 	URL string
 }
 
+// NewAuditURLObserver creates a new AuditURLObserver.
 func NewAuditURLObserver(url string) *AuditURLObserver {
 	return &AuditURLObserver{ID: "audit_url", URL: url}
 }
 
+// Update sends the audit event to the specified URL via HTTP POST.
 func (a *AuditURLObserver) Update(event model.AuditEvent) {
 	data, err := json.MarshalIndent(event, "", "  ")
 	if err != nil {
@@ -67,6 +72,7 @@ func (a *AuditURLObserver) Update(event model.AuditEvent) {
 	defer resp.Body.Close()
 }
 
+// GetID returns the ID of the observer.
 func (a *AuditURLObserver) GetID() string {
 	return a.ID
 }

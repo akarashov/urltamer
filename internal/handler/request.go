@@ -9,16 +9,7 @@ import (
 	"github.com/akarashov/urltamer/internal/service"
 )
 
-func (h *Handler) isConflictResolver(err error) (int, bool) {
-	if err == nil {
-		return http.StatusCreated, true
-	} else if errors.Is(err, service.ErrURLAlreadyExists) {
-		return http.StatusConflict, true
-	} else {
-		return 0, false
-	}
-}
-
+// RequestEndpoint handles URL shortening requests.
 func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 	reqURLb, err := io.ReadAll(req.Body)
 	reqURL := string(reqURLb)
@@ -39,5 +30,16 @@ func (h *Handler) RequestEndpoint(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(status)
 		resp := []byte(fmt.Sprintf("%s/%s", *h.Base, tamer.ShortURL))
 		res.Write(resp)
+	}
+}
+
+// isConflictResolver checks if the error indicates a URL conflict and returns the appropriate HTTP status code.
+func (h *Handler) isConflictResolver(err error) (int, bool) {
+	if err == nil {
+		return http.StatusCreated, true
+	} else if errors.Is(err, service.ErrURLAlreadyExists) {
+		return http.StatusConflict, true
+	} else {
+		return 0, false
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/akarashov/urltamer/internal/model"
 )
 
+// RequestJSONEndpointBatch handles batch URL shortening requests in JSON format.
 func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Request) {
 	var requestBatchs model.RequestBatchs
 	var response model.ResponseBatchs

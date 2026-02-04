@@ -1,3 +1,4 @@
+// Package service provides URL shortening services.
 package service
 
 import (
@@ -9,19 +10,29 @@ import (
 	"github.com/akarashov/urltamer/internal/utils"
 )
 
+// ErrURLAlreadyExists is returned when trying to create a short URL for an original URL that already exists.
 var ErrURLAlreadyExists = errors.New("URL already exists")
-var ErrShortURLConflict = errors.New("short URL conflict")
-var ErrShortURLNotFound = errors.New("short URL not found")
-var ErrURLDeleted       = errors.New("URL deleted")
 
+// ErrShortURLConflict is returned when a unique short URL cannot be generated.
+var ErrShortURLConflict = errors.New("short URL conflict")
+
+// ErrShortURLNotFound is returned when a short URL does not exist in the repository.
+var ErrShortURLNotFound = errors.New("short URL not found")
+
+// ErrURLDeleted is returned when the requested URL has been marked as deleted.
+var ErrURLDeleted = errors.New("URL deleted")
+
+// URLService provides methods for URL shortening operations.
 type URLService struct {
 	repo repository.Repository
 }
 
+// NewURLService creates a new instance of URLService.
 func NewURLService(repo repository.Repository) *URLService {
 	return &URLService{repo: repo}
 }
 
+// CreateShortURL creates a new short URL for the given original URL and user ID.
 func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, userID int) (*model.Tamer, error) {
 	existing, err := s.repo.GetTamerByOriginalURL(ctx, originalURL)
 	if err != nil {
@@ -54,20 +65,7 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, use
 	return &tamer, nil
 }
 
-func (s *URLService) generateUniqueShortURL(ctx context.Context) (string, error) {
-	for range utils.MaxAttempts {
-		shortURL := utils.GenerateShortURL()
-		existing, err := s.repo.GetTamerByShortURL(ctx, shortURL)
-		if err != nil {
-			return "", err
-		}
-		if existing == nil {
-			return shortURL, nil
-		}
-	}
-	return "", ErrShortURLConflict
-}
-
+// GetOriginalURL retrieves the original URL for a given short URL.
 func (s *URLService) GetOriginalURL(ctx context.Context, shortURL string) (string, error) {
 	tamer, err := s.repo.GetTamerByShortURL(ctx, shortURL)
 	if err != nil {
@@ -82,14 +80,17 @@ func (s *URLService) GetOriginalURL(ctx context.Context, shortURL string) (strin
 	return tamer.OriginalURL, nil
 }
 
+// GetAllURLs retrieves all URL mappings from the repository.
 func (s *URLService) GetAllURLs(ctx context.Context) (model.Tamers, error) {
 	return s.repo.LoadTamers(ctx)
 }
 
+// GetUserURLs retrieves all URL mappings for a specific user.
 func (s *URLService) GetUserURLs(ctx context.Context, userID int) (model.Tamers, error) {
 	return s.repo.GetUserURLs(ctx, userID)
 }
 
+// DeleteTamer marks URL mappings as deleted for a specific user.
 func (s *URLService) DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error) {
 	affected, err := s.repo.DeleteTamer(ctx, userID, shortURLs)
 	if err != nil {
@@ -98,11 +99,28 @@ func (s *URLService) DeleteTamer(ctx context.Context, userID int, shortURLs []st
 	return affected, nil
 }
 
+// Ping checks the connectivity of the repository.
 func (s *URLService) Ping(ctx context.Context) bool {
 	return s.repo.Ping(ctx)
 }
 
+// GetTamerByOriginalURL retrieves a URL mapping by its original URL.
 func (s *URLService) GetTamerByOriginalURL(ctx context.Context, originalURL string) (string, error) {
 	tamer, err := s.repo.GetTamerByOriginalURL(ctx, originalURL)
 	return tamer.ShortURL, err
+}
+
+// generateUniqueShortURL generates a unique short URL that does not exist in the repository.
+func (s *URLService) generateUniqueShortURL(ctx context.Context) (string, error) {
+	for range utils.MaxAttempts {
+		shortURL := utils.GenerateShortURL()
+		existing, err := s.repo.GetTamerByShortURL(ctx, shortURL)
+		if err != nil {
+			return "", err
+		}
+		if existing == nil {
+			return shortURL, nil
+		}
+	}
+	return "", ErrShortURLConflict
 }

@@ -7,14 +7,17 @@ import (
 	"net/http"
 )
 
+// Request represents the JSON structure for a URL shortening request.
 type Request struct {
 	URL string `json:"url"`
 }
 
+// Response represents the JSON structure for a URL shortening response.
 type Response struct {
 	Result string `json:"result"`
 }
 
+// RequestJSONEndpoint handles URL shortening requests in JSON format.
 func (h *Handler) RequestJSONEndpoint(res http.ResponseWriter, req *http.Request) {
 	var request Request
 	var response Response

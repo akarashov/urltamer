@@ -1,9 +1,15 @@
+// URL Shortener Service (tamer)
 package main
 
 import (
 	"context"
 	"flag"
 	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/akarashov/urltamer/internal/config"
 	"github.com/akarashov/urltamer/internal/handler"
@@ -64,20 +70,68 @@ func main() {
 	h := handler.New(cfg, service, ctx)
 	mux := chi.NewRouter()
 
-	mux.Post(`/`, handler.AuditMiddleware(handler.LoggingMiddlewareRequest(handler.GzipMiddleware(handler.CookieMiddleware(h.RequestEndpoint)), *log), auditSubject)) // TODO: make middleware audit
-	mux.Post(`/api/shorten`, handler.AuditMiddleware(handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpoint), *log), auditSubject))            // TODO: make middleware audit
-	mux.Post(`/api/shorten/batch`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(h.RequestJSONEndpointBatch), *log))
+	// middleware that need extra params
+	gzipMw := handler.Adapt(handler.GzipMiddleware)
+	cookieMw := handler.Adapt(handler.CookieMiddleware)
+	logReqMw := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler.LoggingMiddlewareRequest(http.HandlerFunc(next.ServeHTTP), *log)(w, r)
+		})
+	}
+	logResMw := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler.LoggingMiddlewareResponse(http.HandlerFunc(next.ServeHTTP), *log)(w, r)
+		})
+	}
 
-	mux.Get(`/api/user/urls`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(handler.CookieMiddleware(h.UserURLsEndpoint)), *log))
-	mux.Get(`/ping`, handler.LoggingMiddlewareResponse(handler.GzipMiddleware(h.PingEndpoint), *log))
-	mux.Get(`/{tamer}`, handler.AuditMiddleware(handler.LoggingMiddlewareResponse(handler.GzipMiddleware(handler.CookieMiddleware(h.ResponseEndpoint)), *log), auditSubject)) // TODO: make middleware audit
+	// Common middleware
+	mux.Use(gzipMw)
+	mux.Use(cookieMw)
+	mux.Use(logResMw)
+	mux.Use(logReqMw)
 
-	mux.Delete(`/api/user/urls`, handler.LoggingMiddlewareRequest(handler.GzipMiddleware(handler.CookieMiddleware(h.DeleteUserURLsEndpoint)), *log))
+	// Routes
+	mux.Post(`/`, handler.AuditMiddleware(h.RequestEndpoint, auditSubject))
+	mux.Post(`/api/shorten`, handler.AuditMiddleware(h.RequestJSONEndpoint, auditSubject))
+	mux.Post(`/api/shorten/batch`, h.RequestJSONEndpointBatch)
 
-	log.Infow("Starting server", "addr", cfg.Listen)
+	mux.Get(`/api/user/urls`, h.UserURLsEndpoint)
+	mux.Get(`/ping`, h.PingEndpoint)
+	mux.Get(`/{tamer}`, handler.AuditMiddleware(h.ResponseEndpoint, auditSubject))
 
-	err = http.ListenAndServe(cfg.Listen, mux)
-	if err != nil {
-		log.Fatal(err)
+	mux.Delete(`/api/user/urls`, h.DeleteUserURLsEndpoint)
+
+	// start pprof server with graceful shutdown support
+	pprofSrv := &http.Server{Addr: config.PprofAddr, Handler: nil}
+	go func() {
+		log.Infow("Starting pprof", "addr", config.PprofAddr)
+		if perr := pprofSrv.ListenAndServe(); perr != nil && perr != http.ErrServerClosed {
+			log.Warn(perr)
+		}
+	}()
+
+	// start main server with graceful shutdown support
+	srv := &http.Server{Addr: cfg.Listen, Handler: mux}
+	go func() {
+		log.Infow("Starting server", "addr", cfg.Listen)
+		if serr := srv.ListenAndServe(); serr != nil && serr != http.ErrServerClosed {
+			log.Error(serr)
+		}
+	}()
+
+	// wait for interrupt signal to gracefully shutdown servers
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Infow("Shutting down servers")
+	ctxShut, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err = srv.Shutdown(ctxShut); err != nil {
+		log.Warnw("Error shutting down main server", "err", err)
+	}
+	if err = pprofSrv.Shutdown(ctxShut); err != nil {
+		log.Warnw("Error shutting down pprof server", "err", err)
 	}
 }
