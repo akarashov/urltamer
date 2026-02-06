@@ -3,7 +3,7 @@
 //   - all analyzers class SA from staticcheck honnef.co/go/tools/staticcheck
 //   - one more other analyzers from staticcheck honnef.co/go/tools/staticcheck
 //   - two public analyzers: `github.com/mdempsky/unconvert` and `github.com/mvdan/unparam`.
-//   - a custom analyzer `NoExitMain` which forbids calling `os.Exit` inside the `main` function.
+//   - a custom analyzer `NoExitMain` which forbids calling `osExit` inside the `main` function.
 //
 // # Running
 //
@@ -39,6 +39,9 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unreachable"
 	"golang.org/x/tools/go/analysis/passes/unsafeptr"
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
+
+	"github.com/gordonklaus/ineffassign/pkg/ineffassign"
+	"github.com/timakin/bodyclose/passes/bodyclose"
 
 	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
@@ -87,6 +90,10 @@ func main() {
 	}
 
 	// External analyzer
+	// ineffassign reports ineffectual assignments
+	// bodyclose reports http.Response.Body that is not closed
+	analyzers = append(analyzers, ineffassign.Analyzer)
+	analyzers = append(analyzers, bodyclose.Analyzer)
 
 	// Our custom analyzer
 	analyzers = append(analyzers, NoExitMain)

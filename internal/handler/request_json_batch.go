@@ -35,8 +35,8 @@ func (h *Handler) RequestJSONEndpointBatch(res http.ResponseWriter, req *http.Re
 		if id, ok := UserIDFromRequest(req); ok {
 			uid = id
 		}
-		tamer, err := h.Service.CreateShortURL(h.Context, requestBatch.OriginalURL, uid)
-		status, ok := h.isConflictResolver(err)
+		tamer, errr := h.Service.CreateShortURL(h.Context, requestBatch.OriginalURL, uid)
+		status, ok := h.isConflictResolver(errr)
 		if !ok {
 			http.Error(res, "Internal Server Error", http.StatusInternalServerError)
 			return

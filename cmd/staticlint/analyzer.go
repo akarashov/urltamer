@@ -2,74 +2,62 @@ package main
 
 import (
 	"go/ast"
-	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 )
 
-// NoExitMain is an analyzer that reports direct calls to os.Exit inside the
+// NoExitMain is an analyzer that reports direct calls to osExit inside the
 // main function of package main. Programs should use graceful shutdown where
-// possible instead of abruptly calling os.Exit from main.
+// possible instead of abruptly calling osExit from main.
 var NoExitMain = &analysis.Analyzer{
 	Name: "noexitmain",
-	Doc:  "reports direct calls to os.Exit in main.main; prefer graceful shutdown",
-	Run: func(pass *analysis.Pass) (interface{}, error) {
-		// Only check package main
-		if pass.Pkg.Name() != "main" {
-			return nil, nil
+	Doc:  "reports direct calls to osExit in main.main; prefer graceful shutdown",
+	Run:  run,
+}
+
+// run executes the analysis pass.
+func run(pass *analysis.Pass) (any, error) {
+	for _, file := range pass.Files {
+		if isNotMainPackage(file) {
+			continue
 		}
-
-		for _, f := range pass.Files {
-			ast.Inspect(f, func(n ast.Node) bool {
-				call, ok := n.(*ast.CallExpr)
-				if !ok {
-					return true
-				}
-
-				// We're interested in selector calls like os.Exit
-				sel, ok := call.Fun.(*ast.SelectorExpr)
-				if !ok {
-					return true
-				}
-
-				ident := sel.Sel
-
-				obj := pass.TypesInfo.Uses[ident]
-				if obj == nil {
-					return true
-				}
-
-				fn, ok := obj.(*types.Func)
-				if !ok {
-					return true
-				}
-				if fn.Pkg() == nil {
-					return true
-				}
-				if fn.Pkg().Path() != "os" || fn.Name() != "Exit" {
-					return true
-				}
-
-				// Confirm the call is inside a function declaration named main
-				for _, decl := range f.Decls {
-					fd, ok := decl.(*ast.FuncDecl)
-					if !ok || fd.Body == nil {
-						continue
-					}
-					if fd.Name.Name != "main" {
-						continue
-					}
-					// Check positions: call must be inside fd.Body
-					if call.Pos() >= fd.Body.Pos() && call.End() <= fd.Body.End() {
-						pass.Reportf(call.Lparen, "avoid direct os.Exit call in main; use graceful shutdown instead")
-						// one report is enough for this call
-						return true
-					}
-				}
-
-				return true
-			})
+		mainFunction := getMainFuncDecl(file)
+		if mainFunction == nil {
+			continue
 		}
-		return nil, nil
-	},
+		ast.Inspect(mainFunction, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if ok {
+				selector, ok := call.Fun.(*ast.SelectorExpr)
+				if ok {
+					packageName, ok := selector.X.(*ast.Ident)
+					if ok {
+						if selector.Sel.Name == "Exit" && packageName.Name == "os" {
+							pass.Reportf(node.Pos(), "osExit call within main package main func")
+						}
+					}
+				}
+			}
+			return true
+		})
+	}
+	return nil, nil
+}
+
+// isMainPackageFile checks if the given AST file belongs to package main.
+func isNotMainPackage(fileNode *ast.File) bool {
+	return fileNode.Name.Name != "main"
+}
+
+// getMainFuncDecl returns the *ast.FuncDecl for the main function in the given file,
+func getMainFuncDecl(fileNode *ast.File) *ast.FuncDecl {
+	for _, topDeclaration := range fileNode.Decls {
+		function, ok := topDeclaration.(*ast.FuncDecl)
+		if ok {
+			if function.Name.Name == "main" {
+				return function
+			}
+		}
+	}
+	return nil
 }
