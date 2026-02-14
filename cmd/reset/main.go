@@ -12,11 +12,11 @@ import (
 	"go/ast"
 	"go/format"
 	"go/types"
-	"html/template"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"golang.org/x/tools/go/packages"
 )
