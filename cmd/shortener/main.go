@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -15,10 +16,20 @@ import (
 	"github.com/akarashov/urltamer/internal/handler"
 	"github.com/akarashov/urltamer/internal/repository"
 	"github.com/akarashov/urltamer/internal/service"
+	"github.com/akarashov/urltamer/internal/utils"
 	"github.com/go-chi/chi/v5"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 func main() {
+
+	fmt.Printf("Build version: %s\n", utils.NA(buildVersion))
+	fmt.Printf("Build date: %s\n", utils.NA(buildDate))
+	fmt.Printf("Build commit: %s\n", utils.NA(buildCommit))
+
 	log := config.NewLogger()
 	cfg := config.New()
 	flag.Parse()
