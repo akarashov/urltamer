@@ -18,6 +18,7 @@ import (
 	"github.com/akarashov/urltamer/internal/service"
 	"github.com/akarashov/urltamer/internal/utils"
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var buildVersion string
@@ -35,28 +36,7 @@ func main() {
 	flag.Parse()
 	ecfg := config.NewEnv()
 
-	if ecfg.Listen != "" {
-		cfg.Listen = ecfg.Listen
-	}
-	if ecfg.Base != "" {
-		cfg.Base = ecfg.Base
-	}
-
-	if ecfg.DataBaseDSN != "" {
-		cfg.DataBaseDSN = ecfg.DataBaseDSN
-	}
-
-	if ecfg.FileStoragePath != "" {
-		cfg.FileStoragePath = ecfg.FileStoragePath
-	}
-
-	if ecfg.AuditFile != "" {
-		cfg.AuditFile = ecfg.AuditFile
-	}
-
-	if ecfg.AuditURL != "" {
-		cfg.AuditURL = ecfg.AuditURL
-	}
+	config.ApplyEnvOverrides(cfg, ecfg)
 
 	auditSubject := service.NewAuditSubject()
 	if cfg.AuditFile != "" {
@@ -124,9 +104,21 @@ func main() {
 	// start main server with graceful shutdown support
 	srv := &http.Server{Addr: cfg.Listen, Handler: mux}
 	go func() {
-		log.Infow("Starting server", "addr", cfg.Listen)
-		if serr := srv.ListenAndServe(); serr != nil && serr != http.ErrServerClosed {
-			log.Error(serr)
+		if cfg.EnableHTTPS {
+			manager := &autocert.Manager{
+				Cache:  autocert.DirCache("certs"),
+				Prompt: autocert.AcceptTOS,
+			}
+			srv.TLSConfig = manager.TLSConfig()
+			log.Infow("Starting https server", "addr", cfg.Listen)
+			if serr := srv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				log.Error(serr)
+			}
+		} else {
+			log.Infow("Starting http server", "addr", cfg.Listen)
+			if serr := srv.ListenAndServe(); serr != nil && serr != http.ErrServerClosed {
+				log.Error(serr)
+			}
 		}
 	}()
 

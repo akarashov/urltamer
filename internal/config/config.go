@@ -22,6 +22,7 @@ type Config struct {
 	DataBaseDSN     string `env:"DATABASE_DSN"`
 	AuditFile       string `env:"AUDIT_FILE"`
 	AuditURL        string `env:"AUDIT_URL"`
+	EnableHTTPS     bool   `env:"ENABLE_HTTPS" envDefault:"false"`
 }
 
 // New initializes a Config struct with command-line flags.
@@ -33,6 +34,7 @@ func New() *Config {
 	flag.StringVar(&c.DataBaseDSN, "d", "", "Data Base DSN")
 	flag.StringVar(&c.AuditFile, "audit-file", "", "Audit log file path")
 	flag.StringVar(&c.AuditURL, "audit-url", "", "Audit log ULR")
+	flag.BoolVar(&c.EnableHTTPS, "s", false, "Enable HTTPS")
 	return c
 }
 
@@ -44,6 +46,31 @@ func NewEnv() *Config {
 		log.Fatal(err)
 	}
 	return c
+}
+
+// ApplyEnvOverrides copies non-empty fields from envCfg into cfg.
+func ApplyEnvOverrides(cfg *Config, envCfg *Config) {
+	if envCfg.Listen != "" {
+		cfg.Listen = envCfg.Listen
+	}
+	if envCfg.Base != "" {
+		cfg.Base = envCfg.Base
+	}
+	if envCfg.DataBaseDSN != "" {
+		cfg.DataBaseDSN = envCfg.DataBaseDSN
+	}
+	if envCfg.FileStoragePath != "" {
+		cfg.FileStoragePath = envCfg.FileStoragePath
+	}
+	if envCfg.AuditFile != "" {
+		cfg.AuditFile = envCfg.AuditFile
+	}
+	if envCfg.AuditURL != "" {
+		cfg.AuditURL = envCfg.AuditURL
+	}
+	if envCfg.EnableHTTPS {
+		cfg.EnableHTTPS = envCfg.EnableHTTPS
+	}
 }
 
 // NewLogger creates and returns a SugaredLogger for logging.
