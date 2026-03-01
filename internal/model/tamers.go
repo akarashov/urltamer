@@ -53,3 +53,9 @@ type AuditEvent struct {
 	UserID string `json:"user_id,omitempty"` // идентификатор пользователя, если есть
 	URL    string `json:"url,omitempty"`     // оригинальный (не сокращенный) URL
 }
+
+// InternalStats represents internal statistics of the URL shortener service.
+type InternalStats struct {
+	URLs  int `json:"urls,omitempty"`  // количество сокращённых URL в сервисе
+	Users int `json:"users,omitempty"` // количество пользователей в сервисе
+}

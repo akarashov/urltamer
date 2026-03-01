@@ -27,6 +27,7 @@ type Config struct {
 	AuditURL        string `env:"AUDIT_URL"`
 	EnableHTTPS     bool   `env:"ENABLE_HTTPS" envDefault:"false"`
 	ConfigJSONPath  string `env:"CONFIG"`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET"`
 }
 
 // JSONConfig is a struct for parsing JSON configuration files.
@@ -36,6 +37,7 @@ type ConfigJSON struct {
 	FileStoragePath string `json:"file_storage_path"`
 	DataBaseDSN     string `json:"database_dsn"`
 	EnableHTTPS     bool   `json:"enable_https"`
+	TrustedSubnet   string `json:"trusted_subnet"`
 }
 
 // NewDefault initializes a Default Config
@@ -57,6 +59,7 @@ func New() *Config {
 	flag.StringVar(&c.AuditURL, "audit-url", "", "Audit log ULR")
 	flag.BoolVar(&c.EnableHTTPS, "s", false, "Enable HTTPS")
 	flag.StringVar(&c.ConfigJSONPath, "c", "", "JSON config file path")
+	flag.StringVar(&c.TrustedSubnet, "t", "", "Trusted subnet CIDR notation")
 	return c
 }
 
@@ -104,6 +107,9 @@ func ApplyEnvOverrides(cfg *Config, envCfg *Config) {
 		if !cfg.EnableHTTPS {
 			cfg.EnableHTTPS = cfgJSON.EnableHTTPS
 		}
+		if cfg.TrustedSubnet == "" {
+			cfg.TrustedSubnet = cfgJSON.TrustedSubnet
+		}
 	}
 
 	if envCfg.Listen != "" {
@@ -133,6 +139,9 @@ func ApplyEnvOverrides(cfg *Config, envCfg *Config) {
 	}
 	if cfg.Base == "" {
 		cfg.Base = defCfg.Base
+	}
+	if cfg.TrustedSubnet == "" {
+		cfg.TrustedSubnet = defCfg.TrustedSubnet
 	}
 }
 

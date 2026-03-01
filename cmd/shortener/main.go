@@ -58,6 +58,7 @@ func main() {
 	}
 	service := service.NewURLService(repo)
 	ctx := context.Background()
+	ctx = context.WithValue(ctx, handler.CtxKeyCIDR, cfg.TrustedSubnet)
 	h := handler.New(cfg, service, ctx)
 	mux := chi.NewRouter()
 
@@ -87,6 +88,7 @@ func main() {
 	mux.Post(`/api/shorten/batch`, h.RequestJSONEndpointBatch)
 
 	mux.Get(`/api/user/urls`, h.UserURLsEndpoint)
+	mux.Get(`/api/internal/stats`, h.InternalStatsEndpoint)
 	mux.Get(`/ping`, h.PingEndpoint)
 	mux.Get(`/{tamer}`, handler.AuditMiddleware(h.ResponseEndpoint, auditSubject))
 

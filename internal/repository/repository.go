@@ -16,5 +16,6 @@ type Repository interface {
 	GetTamerByOriginalURL(ctx context.Context, originalURL string) (*model.Tamer, error)
 	DeleteTamer(ctx context.Context, userID int, shortURLs []string) (int64, error)
 	Ping(ctx context.Context) bool
+	GetInternalStats(ctx context.Context) (*model.InternalStats, error)
 	Close() error
 }

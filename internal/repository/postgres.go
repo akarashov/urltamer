@@ -170,3 +170,17 @@ func makeMigraton(pathMigrations string, dataBaseDSN string) error {
 	}
 	return nil
 }
+
+// GetUserURLs retrieves all URL mappings for a specific user.
+func (p *PostgresRepository) GetInternalStats(ctx context.Context) (*model.InternalStats, error) {
+	var internalStats model.InternalStats
+	err := p.db.QueryRowContext(ctx, "SELECT count(*) FROM tamers").Scan(&internalStats.URLs)
+	if err != nil {
+		return nil, err
+	}
+	err = p.db.QueryRowContext(ctx, "SELECT count(*) FROM users").Scan(&internalStats.Users)
+	if err != nil {
+		return nil, err
+	}
+	return &internalStats, nil
+}
