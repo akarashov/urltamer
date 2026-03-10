@@ -93,7 +93,7 @@ func ExampleHandler_UserURLsEndpoint() {
 	_, _ = svc.CreateShortURL(ctx, "http://original.example/5", userID)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
-	req = req.WithContext(context.WithValue(req.Context(), ctxUserID, userID))
+	req = req.WithContext(context.WithValue(req.Context(), CtxUserID, userID))
 	rr := httptest.NewRecorder()
 	h.UserURLsEndpoint(rr, req)
 
@@ -114,7 +114,7 @@ func ExampleHandler_DeleteUserURLsEndpoint() {
 	payload, _ := json.Marshal([]string{tamer.ShortURL})
 	req := httptest.NewRequest(http.MethodDelete, "/api/user/urls", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(context.WithValue(req.Context(), ctxUserID, userID))
+	req = req.WithContext(context.WithValue(req.Context(), CtxUserID, userID))
 	rr := httptest.NewRecorder()
 	h.DeleteUserURLsEndpoint(rr, req)
 

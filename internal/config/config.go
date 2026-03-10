@@ -28,6 +28,7 @@ type Config struct {
 	EnableHTTPS     bool   `env:"ENABLE_HTTPS" envDefault:"false"`
 	ConfigJSONPath  string `env:"CONFIG"`
 	TrustedSubnet   string `env:"TRUSTED_SUBNET"`
+	GrpcAddr        string `env:"GRPC_ADDRESS"`
 }
 
 // JSONConfig is a struct for parsing JSON configuration files.
@@ -38,6 +39,7 @@ type ConfigJSON struct {
 	DataBaseDSN     string `json:"database_dsn"`
 	EnableHTTPS     bool   `json:"enable_https"`
 	TrustedSubnet   string `json:"trusted_subnet"`
+	GrpcAddr        string `json:"grpc_address"`
 }
 
 // NewDefault initializes a Default Config
@@ -45,6 +47,7 @@ func NewDefault() *Config {
 	c := &Config{}
 	c.Listen = ":8080"
 	c.Base = "http://127.0.0.1:8080/"
+	c.GrpcAddr = ":8088"
 	return c
 }
 
@@ -60,6 +63,7 @@ func New() *Config {
 	flag.BoolVar(&c.EnableHTTPS, "s", false, "Enable HTTPS")
 	flag.StringVar(&c.ConfigJSONPath, "c", "", "JSON config file path")
 	flag.StringVar(&c.TrustedSubnet, "t", "", "Trusted subnet CIDR notation")
+	flag.StringVar(&c.GrpcAddr, "grpc", "", "gRPC server address")
 	return c
 }
 
@@ -110,6 +114,9 @@ func ApplyEnvOverrides(cfg *Config, envCfg *Config) {
 		if cfg.TrustedSubnet == "" {
 			cfg.TrustedSubnet = cfgJSON.TrustedSubnet
 		}
+		if cfg.GrpcAddr == "" {
+			cfg.GrpcAddr = cfgJSON.GrpcAddr
+		}
 	}
 
 	if envCfg.Listen != "" {
@@ -140,8 +147,8 @@ func ApplyEnvOverrides(cfg *Config, envCfg *Config) {
 	if cfg.Base == "" {
 		cfg.Base = defCfg.Base
 	}
-	if cfg.TrustedSubnet == "" {
-		cfg.TrustedSubnet = defCfg.TrustedSubnet
+	if cfg.GrpcAddr == "" {
+		cfg.GrpcAddr = defCfg.GrpcAddr
 	}
 }
 

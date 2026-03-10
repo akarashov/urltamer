@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,12 +14,15 @@ import (
 	"time"
 
 	"github.com/akarashov/urltamer/internal/config"
+	"github.com/akarashov/urltamer/internal/grpcserver"
+	"github.com/akarashov/urltamer/internal/proto"
 	"github.com/akarashov/urltamer/internal/handler"
 	"github.com/akarashov/urltamer/internal/repository"
 	"github.com/akarashov/urltamer/internal/service"
 	"github.com/akarashov/urltamer/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
 )
 
 var buildVersion string
@@ -124,6 +128,26 @@ func main() {
 		}
 	}()
 
+	grpcSrvImpl := grpcserver.NewShortenerServer(h)
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(grpcSrvImpl.AuthInterceptor),
+	)
+	proto.RegisterShortenerServiceServer(grpcServer, grpcSrvImpl)
+
+	// start gRPC server with graceful shutdown support
+	go func() {
+		if cfg.GrpcAddr != "" {
+			listen, err := net.Listen("tcp", cfg.GrpcAddr)
+			if err != nil {
+				log.Errorw("Failed to listen tcp for gRPC", "error", err)
+			}
+			log.Infow("Starting gRPC server on port: ", "addr", cfg.GrpcAddr)
+			if err := grpcServer.Serve(listen); err != nil {
+				log.Errorw("gRPC Serve error", "error", err)
+			}
+		}
+	}()
+
 	// wait for interrupt signal to gracefully shutdown servers
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
@@ -139,4 +163,6 @@ func main() {
 	if err = pprofSrv.Shutdown(ctxShut); err != nil {
 		log.Warnw("Error shutting down pprof server", "err", err)
 	}
+	grpcServer.GracefulStop()
+	log.Infow("Servers stopped gracefully")
 }
