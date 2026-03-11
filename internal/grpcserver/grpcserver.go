@@ -13,6 +13,10 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+const CtxKeyUID contextKey = "uid"
+
+type contextKey string
+
 // ShortenerServer implements the gRPC server for URL shortening service
 type ShortenerServer struct {
 	pb.UnimplementedShortenerServiceServer
@@ -40,10 +44,10 @@ func (s *ShortenerServer) AuthInterceptor(ctx context.Context, in interface{}, i
 				return nil, status.Error(codes.Unauthenticated, "Invalid authorization token")
 			}
 		} else {
-			// return nil, status.Error(codes.InvalidArgument, "Authorization token required")
+			return nil, status.Error(codes.InvalidArgument, "Authorization token required")
 		}
 	}
-	newCtx := context.WithValue(ctx, "uid", userID)
+	newCtx := context.WithValue(ctx, CtxKeyUID, userID)
 	return handler(newCtx, in)
 }
 
@@ -54,7 +58,7 @@ func (s *ShortenerServer) ShortenURL(ctx context.Context, in *pb.URLShortenReque
 	if inputURL == "" {
 		return nil, status.Error(codes.InvalidArgument, "URL cannot be empty")
 	}
-	uid := ctx.Value("uid").(int)
+	uid := ctx.Value(CtxKeyUID).(int)
 	tamer, _ := s.h.Service.CreateShortURL(ctx, inputURL, uid)
 	response.SetResult(tamer.ShortURL)
 	return &response, nil
@@ -79,7 +83,7 @@ func (s *ShortenerServer) ExpandURL(ctx context.Context, in *pb.URLExpandRequest
 func (s *ShortenerServer) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*pb.UserURLsResponse, error) {
 	var response pb.UserURLsResponse
 	var urlData pb.URLData
-	uid := ctx.Value("uid").(int)
+	uid := ctx.Value(CtxKeyUID).(int)
 	userURLs, err := s.h.Service.GetUserURLs(ctx, uid)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Failed to retrieve user URLs")
