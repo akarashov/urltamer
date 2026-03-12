@@ -1,20 +1,20 @@
 module github.com/akarashov/urltamer
 
-go 1.24.13
+go 1.24.2
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang-migrate/migrate/v4 v4.19.0
-	github.com/gordonklaus/ineffassign v0.2.0
+	github.com/gordonklaus/ineffassign v0.1.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/stretchr/testify v1.11.1
 	github.com/timakin/bodyclose v0.0.0-20260129054331-73d1f95b84b4
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.47.0
-	golang.org/x/tools v0.40.0
-	google.golang.org/grpc v1.79.1
+	golang.org/x/crypto v0.44.0
+	golang.org/x/tools v0.39.0
+	google.golang.org/grpc v1.75.0-dev
 	google.golang.org/protobuf v1.36.11
 	honnef.co/go/tools v0.6.1
 )
@@ -33,11 +33,11 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20240213143201-ec583247a57a // indirect
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251213004720-97cd9d5aeac2 // indirect
