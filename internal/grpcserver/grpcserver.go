@@ -82,7 +82,6 @@ func (s *ShortenerServer) ExpandURL(ctx context.Context, in *pb.URLExpandRequest
 // ListUserURLs implements the ShortenerServiceServer interface
 func (s *ShortenerServer) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*pb.UserURLsResponse, error) {
 	var response pb.UserURLsResponse
-	var urlData pb.URLData
 	uid := ctx.Value(CtxKeyUID).(int)
 	userURLs, err := s.h.Service.GetUserURLs(ctx, uid)
 	if err != nil {
@@ -90,9 +89,10 @@ func (s *ShortenerServer) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*
 	}
 	var pbUrls []*pb.URLData
 	for _, url := range userURLs {
+		urlData := &pb.URLData{}
 		urlData.SetShortUrl(url.ShortURL)
 		urlData.SetOriginalUrl(url.OriginalURL)
-		pbUrls = append(pbUrls, &urlData)
+		pbUrls = append(pbUrls, urlData)
 	}
 	response.SetUrl(pbUrls)
 	return &response, nil

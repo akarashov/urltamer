@@ -140,6 +140,7 @@ func main() {
 			listen, err := net.Listen("tcp", cfg.GrpcAddr)
 			if err != nil {
 				log.Errorw("Failed to listen tcp for gRPC", "error", err)
+				return
 			}
 			log.Infow("Starting gRPC server on port: ", "addr", cfg.GrpcAddr)
 			if err := grpcServer.Serve(listen); err != nil {
