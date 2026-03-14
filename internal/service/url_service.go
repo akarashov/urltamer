@@ -124,3 +124,8 @@ func (s *URLService) generateUniqueShortURL(ctx context.Context) (string, error)
 	}
 	return "", ErrShortURLConflict
 }
+
+// GetInternalStats retrieves internal statistics of the URL shortener service.
+func (s *URLService) GetInternalStats(ctx context.Context) (*model.InternalStats, error) {
+	return s.repo.GetInternalStats(ctx)
+}

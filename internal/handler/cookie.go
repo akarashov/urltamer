@@ -22,7 +22,7 @@ const tokenExp = time.Hour * 3
 const secretKey = "supersecretkey"
 
 // Key type for storing user ID in context
-const ctxUserID contextKey = "userID"
+const CtxUserID contextKey = "userID"
 
 // Claims represents the JWT claims structure.
 type Claims struct {
@@ -86,7 +86,7 @@ func CookieMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
 		} else {
 			userID = GetUserID(cookie.Value)
 		}
-		ctx := context.WithValue(req.Context(), ctxUserID, userID)
+		ctx := context.WithValue(req.Context(), CtxUserID, userID)
 		wrapped(res, req.WithContext(ctx))
 	}
 }
@@ -94,7 +94,7 @@ func CookieMiddleware(wrapped http.HandlerFunc) http.HandlerFunc {
 // UserIDFromRequest retrieves the user ID from the request's context or cookie.
 func UserIDFromRequest(req *http.Request) (int, bool) {
 	// Parse context first, if middleware was used
-	ctxValue := req.Context().Value(ctxUserID)
+	ctxValue := req.Context().Value(CtxUserID)
 	if ctxValue != nil {
 		userID, ok := ctxValue.(int)
 		if ok && userID > 0 {

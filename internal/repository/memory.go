@@ -124,3 +124,17 @@ func (m *MemoryRepository) DeleteTamer(ctx context.Context, userID int, shortURL
 	}
 	return affected, nil
 }
+
+// GetInternalStats retrieves internal statistics of the URL shortener service.
+func (m *MemoryRepository) GetInternalStats(ctx context.Context) (*model.InternalStats, error) {
+	var internalStats model.InternalStats
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	users := make(map[int]struct{})
+	for _, d := range m.data {
+		users[d.UserID] = struct{}{}
+	}
+	internalStats.Users = len(users)
+	internalStats.URLs = len(m.data)
+	return &internalStats, nil
+}

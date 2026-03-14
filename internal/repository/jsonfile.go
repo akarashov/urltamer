@@ -180,3 +180,18 @@ func (j *JSONFileRepository) save() error {
 	}
 	return os.WriteFile(j.filename, data, 0666)
 }
+
+// GetInternalStats retrieves internal statistics of the URL shortener service.
+func (j *JSONFileRepository) GetInternalStats(ctx context.Context) (*model.InternalStats, error) {
+	var internalStats model.InternalStats
+	j.mutex.RLock()
+	defer j.mutex.RUnlock()
+
+	users := make(map[int]struct{})
+	for _, d := range j.data {
+		users[d.UserID] = struct{}{}
+	}
+	internalStats.Users = len(users)
+	internalStats.URLs = len(j.data)
+	return &internalStats, nil
+}

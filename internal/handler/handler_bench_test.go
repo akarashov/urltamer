@@ -154,7 +154,7 @@ func BenchmarkCookieMiddleware(b *testing.B) {
 
 func BenchmarkUserIDFromRequest_Context(b *testing.B) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(context.WithValue(req.Context(), ctxUserID, 42))
+	req = req.WithContext(context.WithValue(req.Context(), CtxUserID, 42))
 	for i := 0; i < b.N; i++ {
 		UserIDFromRequest(req)
 	}
